@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
         Command::Start => {
             // Start the gRPC server and demonstrate client communication
             println!("Starting gRPC server...");
-            
+
             // Start server in a background task
             let server_handle = tokio::spawn(async {
                 if let Err(e) = start_grpc_server().await {
@@ -44,7 +44,10 @@ async fn main() -> Result<()> {
             println!("Server running on [::1]:50051. Press Ctrl+C to stop.");
             server_handle.await?;
         }
-        Command::Weather { latitude, longitude } => {
+        Command::Weather {
+            latitude,
+            longitude,
+        } => {
             let client = Client::new();
 
             println!(
@@ -57,7 +60,8 @@ async fn main() -> Result<()> {
             let now = Local::now().date_naive();
             let yesterday = now - Duration::days(1);
 
-            let (today_temps, yesterday_temps) = extract_temperatures(&weather_data, now, yesterday);
+            let (today_temps, yesterday_temps) =
+                extract_temperatures(&weather_data, now, yesterday);
 
             println!("\n--- Hourly Weather Data (Every 6 Hours) ---");
             print_hourly_weather(&weather_data, now, yesterday);
