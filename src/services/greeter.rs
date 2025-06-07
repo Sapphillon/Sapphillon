@@ -6,7 +6,7 @@ pub mod hello_world {
     tonic::include_proto!("helloworld");
 }
 
-use hello_world::greeter_server::{Greeter, GreeterServer};
+use hello_world::greeter_server::Greeter;
 use hello_world::{HelloReply, HelloRequest};
 
 #[derive(Debug, Default)]
