@@ -1,7 +1,6 @@
 mod args;
 mod grpc_client;
 mod grpc_server;
-mod utils;
 
 use anyhow::Result;
 use clap::Parser;
