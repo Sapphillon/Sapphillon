@@ -1,7 +1,7 @@
 [package]
 name = "Sapphillon-Controller"
 version = "0.1.0"
-edition = "2021" # Update edition if needed, 2021 is common now
+edition = "2024" 
 authors = ["Yuuta Takahashi <y.highbridge04@gmail.com>"]
 license-file = "LICENSE"
 readme = "README.md"
