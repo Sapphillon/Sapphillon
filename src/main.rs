@@ -4,6 +4,7 @@ mod services;
 
 use anyhow::Result;
 use clap::Parser;
+use log::{debug, error, info};
 
 use args::{Args, Command};
 use server::start_server;
@@ -12,15 +13,21 @@ use server::start_server;
 async fn main() -> Result<()> {
     let args = Args::parse();
 
+    // Initialize logger with the log level from command line arguments
+    env_logger::Builder::from_default_env()
+        .filter_level(args.loglevel.clone().into())
+        .init();
+
     match args.command {
         Command::Start => {
             // Start the gRPC server and demonstrate client communication
-            println!("Starting gRPC server...");
+            info!("Starting gRPC server...");
+            debug!("Log level set to: {:?}", args.loglevel);
 
             // Start server in a background task
             let server_handle = tokio::spawn(async {
                 if let Err(e) = start_server().await {
-                    eprintln!("Server error: {}", e);
+                    error!("Server error: {}", e);
                 }
             });
 
@@ -28,7 +35,7 @@ async fn main() -> Result<()> {
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
             // Keep server running
-            println!("Server running on [::1]:50051. Press Ctrl+C to stop.");
+            info!("Server running on [::1]:50051. Press Ctrl+C to stop.");
             server_handle.await?;
         }
     }

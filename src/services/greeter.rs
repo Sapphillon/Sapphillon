@@ -1,5 +1,6 @@
 // gRPC Greeter service implementation
 
+use log::info;
 use tonic::{Request, Response, Status};
 
 pub mod hello_world {
@@ -18,7 +19,7 @@ impl Greeter for MyGreeter {
         &self,
         request: Request<HelloRequest>,
     ) -> Result<Response<HelloReply>, Status> {
-        println!("Got a request: {:?}", request);
+        info!("Got a request: {:?}", request);
 
         let reply = HelloReply {
             message: format!("Hello {}!", request.into_inner().name),
