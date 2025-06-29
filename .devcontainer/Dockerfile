@@ -4,6 +4,7 @@ FROM mcr.microsoft.com/devcontainers/rust:1-1-bullseye
 # RUSTFLAGS="-C link-arg=-fuse-ld=lld" or with Cargo's configuration file (i.e see .cargo/config.toml).
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
    && apt-get -y install clang busybox protobuf-compiler \
+   && apt-get upgrade -y \
    && wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz \
    && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz \
    && rm go1.24.1.linux-amd64.tar.gz \
