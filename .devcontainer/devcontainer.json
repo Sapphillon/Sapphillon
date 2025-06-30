@@ -4,7 +4,19 @@
 	"name": "Rust",
 	"dockerComposeFile": "docker-compose.yml",
 	"service": "app",
-	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}"
+	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"saoudrizwan.claude-dev",
+				"pbkit.vscode-pbkit",
+				"vadimcn.vscode-lldb",
+				"rust-lang.rust-analyzer",
+				"JScearcy.rust-doc-viewer",
+				"Swellaby.vscode-rust-test-adapter"
+			]
+		}
+	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
