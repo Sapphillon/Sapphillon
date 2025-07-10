@@ -5,12 +5,27 @@ FROM mcr.microsoft.com/devcontainers/rust:1-1-bullseye
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
    && apt-get -y install clang busybox protobuf-compiler \
    && apt-get upgrade -y \
-   && wget https://go.dev/dl/go1.24.1.linux-amd64.tar.gz \
-   && tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz \
-   && rm go1.24.1.linux-amd64.tar.gz \
    && apt-get autoremove -y && apt-get clean -y \
    && rm -rf /var/lib/apt/lists/*
 
+# Set build argument for architecture
+ARG TARGETARCH
+RUN apt-get update \
+    && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends wget \
+    # Set GOARCH and download URL based on TARGETARCH
+    && if [ "$TARGETARCH" = "arm64" ]; then \
+        GO_TARBALL="go1.24.1.linux-arm64.tar.gz"; \
+      else \
+        GO_TARBALL="go1.24.1.linux-amd64.tar.gz"; \
+      fi \
+    && wget https://go.dev/dl/${GO_TARBALL} \
+    && rm -rf /usr/local/go \
+    && tar -C /usr/local -xzf ${GO_TARBALL} \
+    && rm -f ${GO_TARBALL} \
+    && apt-get autoremove -y \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /usr/local/gopath
 ENV GOPATH="/usr/local/gopath"
