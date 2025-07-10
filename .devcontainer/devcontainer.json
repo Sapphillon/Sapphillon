@@ -13,7 +13,10 @@
 				"vadimcn.vscode-lldb",
 				"rust-lang.rust-analyzer",
 				"JScearcy.rust-doc-viewer",
-				"Swellaby.vscode-rust-test-adapter"
+				"Swellaby.vscode-rust-test-adapter",
+				"GitHub.copilot-chat",
+				"GitHub.copilot",
+				"RooVeterinaryInc.roo-cline"
 			]
 		}
 	}
