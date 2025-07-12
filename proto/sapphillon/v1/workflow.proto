@@ -15,8 +15,8 @@ message WorkflowCode {
     string code = 3;
     WorkflowLanguage language = 4;
     google.protobuf.Timestamp created_at = 5;
-    optional string result = 7;
-    optional repeated sapphillon.v1.Permission required_permissions = 8;
+    optional string result = 6;
+    optional repeated sapphillon.v1.Permission required_permissions = 7;
 }
 
 message Workflow {
