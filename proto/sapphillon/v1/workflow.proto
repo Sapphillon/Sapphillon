@@ -19,6 +19,14 @@ message WorkflowCode {
     optional repeated sapphillon.v1.Permission required_permissions = 7;
 }
 
+message WorkflowResult {
+    string id = 1;
+    string display_name = 2;
+    string description = 3;
+    string result = 4; // The result of the workflow execution
+    google.protobuf.Timestamp ran_at = 5;
+}
+
 message Workflow {
     string id = 1;
     string display_name = 2;
@@ -27,4 +35,5 @@ message Workflow {
     repeated WorkflowCode workflow_code = 5;
     google.protobuf.Timestamp created_at = 6;
     google.protobuf.Timestamp updated_at = 7;
+    repeated WorkflowResult workflow_results = 8;
 }
