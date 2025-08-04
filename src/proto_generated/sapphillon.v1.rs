@@ -123,6 +123,25 @@ pub struct PluginPackage {
 }
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Version {
+    /// The version of the application
+    #[prost(string, tag="1")]
+    pub version: ::prost::alloc::string::String,
+}
+/// This message can be extended in the future if needed.
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GetVersionRequest {
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetVersionResponse {
+    /// The current version of the application
+    #[prost(message, optional, tag="1")]
+    pub version: ::core::option::Option<Version>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct WorkflowCode {
     #[prost(string, tag="1")]
     pub id: ::prost::alloc::string::String,
