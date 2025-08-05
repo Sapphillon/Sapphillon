@@ -1,4 +1,4 @@
-.PHONY: buf_check_style, buf_fix_style, buf_debug, rust_test, rust_build, rust_check_format, rust_fix_format
+.PHONY: buf_check_style, buf_fix_style, buf_debug, rust_test, rust_build, rust_check_format, rust_fix_format, buf_generate
 
 buf_check_style:
 	@echo "Check Protocol Buffer Style"
@@ -21,6 +21,12 @@ buf_debug:
 		exit 1; \
 	fi; \
 	evans --proto $$proto_files repl
+
+buf_generate:
+	@echo "Generate Protocol Buffer Code"
+	@echo "----------------------------------------------------------"
+	buf generate proto
+	@echo "----------------------------------------------------------"
 
 rust_test:
 	@echo "Run Rust Tests"

@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package sapphillon.v1;
+
+import "google/protobuf/timestamp.proto";
+import "sapphillon/v1/permission.proto";
+
+enum WorkflowLanguage {
+  WORKFLOW_LANGUAGE_UNSPECIFIED = 0;
+  WORKFLOW_LANGUAGE_TYPESCRIPT = 1;
+  WORKFLOW_LANGUAGE_JAVASCRIPT = 2;
+}
+
+message WorkflowCode {
+  string id = 1;
+  int32 code_revision = 2;
+  string code = 3;
+  WorkflowLanguage language = 4;
+  google.protobuf.Timestamp created_at = 5;
+  optional string result = 6;
+  repeated sapphillon.v1.Permission required_permissions = 7;
+}
+
+enum WorkflowResultType {
+  WORKFLOW_RESULT_TYPE_SUCCESS_UNSPECIFIED = 0;
+  WORKFLOW_RESULT_TYPE_FAILURE = 1;
+}
+
+// TODO Add data types to properly represent the results
+message WorkflowResult {
+  string id = 1;
+  string display_name = 2;
+  string description = 3;
+  string result = 4; // The result of the workflow execution
+  google.protobuf.Timestamp ran_at = 5;
+  WorkflowResultType result_type = 6;
+  int32 exit_code = 7; // Exit code of the workflow execution
+  int32 workflow_code_revision = 8; // Revision of the workflow code that produced this result
+  int32 workflow_result_revision = 9; // Revision of the workflow result
+}
+
+message Workflow {
+  string id = 1;
+  string display_name = 2;
+  string description = 3;
+  WorkflowLanguage workflow_language = 4;
+  repeated WorkflowCode workflow_code = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  repeated WorkflowResult workflow_results = 8;
+}

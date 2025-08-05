@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package sapphillon.v1;
+
+import "google/protobuf/timestamp.proto";
+import "sapphillon/v1/permission.proto";
+
+message PluginFunction {
+  string function_id = 1; // Unique identifier for the function
+  string function_name = 2; // Name of the function
+  string description = 3; // Description of what the function does
+  repeated Permission permissions = 4; // Permissions required to execute this function
+}
+
+message PluginPackage {
+  string package_id = 1;
+  string package_name = 2;
+  string package_version = 3;
+  string description = 4;
+  repeated PluginFunction functions = 5;
+  string plugin_store_url = 6;
+  optional bool internal_plugin = 7;
+  optional bool verified = 8;
+  optional bool deprecated = 9;
+  google.protobuf.Timestamp installed_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}

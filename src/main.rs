@@ -1,4 +1,5 @@
 mod args;
+mod proto_generated;
 mod server;
 mod services;
 
