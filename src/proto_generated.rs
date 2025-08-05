@@ -40,6 +40,3 @@ pub mod google {
         include!("proto_generated/google.type.rs");
     }
 }
-
-// Convenient re-exports for easier access
-pub use sapphillon::v1::*;
