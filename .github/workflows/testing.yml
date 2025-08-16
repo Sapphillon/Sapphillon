@@ -22,6 +22,25 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          
+      - name: Setup SSH knwon_hosts (Windows)
+        if: ${{ matrix.runner == 'windows-latest' }}
+        run: |
+          # github.com のホストキーを known_hosts ファイルに追記する
+          $knownHostsPath = Join-Path $sshPath "known_hosts"
+          ssh-keyscan -H github.com | Add-Content -Path $knownHostsPath
+
+          Write-Host "github.com has been added to the known_hosts file."
+
+      - name: Setup SSH KNOWN_HOSTS (mac OS, Linux)
+        if: ${{ matrix.runner != 'windows-latest' }}
+        run: |
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
       - name: Install Dependecies on Ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
@@ -36,7 +55,10 @@ jobs:
       - name: Install Dependencies on Windows
         if: ${{ matrix.os == 'windows-latest' }}
         run: |
-          choco install protoc
+          choco install make --yes
+          choco install nasm --yes
+          choco install protoc --yes
+          echo "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
@@ -50,6 +72,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
       - name: Install Dependencies
