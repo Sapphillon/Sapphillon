@@ -23,7 +23,7 @@ rust_check_format:
 rust_fix_format:
 	@echo "Fix Rust Format"
 	@echo "----------------------------------------------------------"
-	cargo fmt || treu
+	cargo fmt || true
 	@echo "----------------------------------------------------------"
 	cargo clippy --fix --allow-dirty || true
 	@echo "----------------------------------------------------------"
