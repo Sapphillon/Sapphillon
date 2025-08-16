@@ -59,7 +59,8 @@ jobs:
 
       - uses: actions/checkout@v4
       
-      - name: Setup SSH
+      - name: Setup SSH (mac OS, Linux)
+        if: ${{ matrix.runner != 'windows-latest' }}
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
@@ -67,11 +68,34 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+      - name: Setup SSH (Windows)
+        if: ${{ matrix.runner == 'windows-latest' }}
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+            # 元のコマンド: mkdir -p ~/.ssh
+            New-Item -Path (Join-Path $HOME ".ssh") -ItemType Directory -Force
+
+            # 元のコマンド: echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+            $env:SSH_PRIVATE_KEY | Set-Content -Path (Join-Path $HOME ".ssh\id_rsa")
+
+            # 元のコマンド: chmod 600 ~/.ssh/id_rsa
+            # icacls.exe を使ってファイルのアクセス権を変更します
+            $idRsaPath = Join-Path $HOME ".ssh\id_rsa"
+            icacls.exe $idRsaPath /inheritance:r
+            icacls.exe $idRsaPath /grant "$($env:USERNAME):F"
+
+            # 元のコマンド: ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+            ssh-keyscan -H github.com | Add-Content -Path (Join-Path $HOME ".ssh\known_hosts")
 
       - name: Install Dependencies on Windows
         if: ${{ matrix.runner == 'windows-latest' }}
         run: |
             choco install make --yes
+            choco install nasm --yes
+            choco install protoc --yes
+            echo "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
       - name: Install Dependencies on MacOS
         if: ${{ matrix.runner == 'macos-latest' }}
         run: |
