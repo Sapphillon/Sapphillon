@@ -1,8 +1,8 @@
 // gRPC server startup logic
 
-use sapphillon_core::proto::sapphillon::v1::version_service_server::VersionServiceServer;
 use crate::services::MyVersionService;
 use log::info;
+use sapphillon_core::proto::sapphillon::v1::version_service_server::VersionServiceServer;
 use tonic::transport::Server;
 
 pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
