@@ -10,6 +10,12 @@ homepage = "https://github.com/Walkmana-25/Sapphillon"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+resolver = "3"
+members = [
+    "plugins/*",
+]
+
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
