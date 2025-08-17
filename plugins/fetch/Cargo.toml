@@ -10,3 +10,6 @@ homepage.workspace = true
 edition = "2024"
 
 [dependencies]
+anyhow.workspace = true
+log.workspace = true
+deno_core.workspace = true

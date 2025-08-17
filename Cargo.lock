@@ -1410,6 +1410,7 @@ dependencies = [
  "bytes",
  "capacity_builder",
  "cooked-waker",
+ "deno_core_icudata",
  "deno_error",
  "deno_ops 0.231.0",
  "deno_path_util",
@@ -2936,6 +2937,11 @@ dependencies = [
 [[package]]
 name = "fetch"
 version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "deno_core 0.355.0",
+ "log",
+]
 
 [[package]]
 name = "ff"
