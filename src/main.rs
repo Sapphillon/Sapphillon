@@ -2,6 +2,7 @@ mod args;
 mod proto_generated;
 mod server;
 mod services;
+mod workflow;
 
 use anyhow::Result;
 use clap::Parser;
@@ -10,10 +11,10 @@ use log::{debug, error, info};
 use args::{Args, Command};
 use server::start_server;
 
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
-
     // Initialize logger with the log level from command line arguments
     env_logger::Builder::from_default_env()
         .filter_level(args.loglevel.clone().into())
