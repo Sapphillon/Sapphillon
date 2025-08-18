@@ -9,7 +9,6 @@ dependencies = [
  "anyhow",
  "chrono",
  "clap",
- "deno_error",
  "env_logger",
  "log",
  "prost",
@@ -2943,6 +2942,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "deno_core 0.355.0",
+ "deno_error",
  "log",
  "reqwest",
 ]

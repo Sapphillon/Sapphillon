@@ -1,3 +1,5 @@
+use std::string;
+
 // Sapphillon
 // Copyright 2025 Yuta Takahashi
 //
@@ -16,7 +18,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
+use deno_core::{op2, extension, error::AnyError};
 use anyhow::{Result, Error};
+use deno_error::JsErrorBox;
 
 fn fetch(url: &str) -> Result<String> {
     let response = reqwest::blocking::get(url)?;
@@ -24,8 +28,14 @@ fn fetch(url: &str) -> Result<String> {
         let body = response.text()?;
         Ok(body)
     } else {
-        Err(Error::msg(format!("Failed to fetch URL: {url}")))
+        Err(AnyError::msg(format!("Failed to fetch URL: {url}")))
     }
+}
+
+#[op2]
+#[string]
+fn op2_fetch(#[string] url: String) -> Result<String, JsErrorBox> {
+    fetch(&url)
 }
 
 
