@@ -22,6 +22,24 @@ use deno_core::{op2, extension, error::AnyError};
 use anyhow::{Result, Error};
 use deno_error::JsErrorBox;
 
+extension! {
+    fetch,
+    ops = [
+        op2_fetch,
+    ],
+    esm = ["src/00_fetch.js"],
+}
+
+#[op2]
+#[string]
+fn op2_fetch(#[string] url: String) -> Result<String, JsErrorBox> {
+    let result = fetch(&url);
+    match result {
+        Ok(body) => Ok(body),
+        Err(e) => Err(JsErrorBox::new("Error", e.to_string())),
+    }
+}
+
 fn fetch(url: &str) -> Result<String> {
     let response = reqwest::blocking::get(url)?;
     if response.status().is_success() {
@@ -31,13 +49,6 @@ fn fetch(url: &str) -> Result<String> {
         Err(AnyError::msg(format!("Failed to fetch URL: {url}")))
     }
 }
-
-#[op2]
-#[string]
-fn op2_fetch(#[string] url: String) -> Result<String, JsErrorBox> {
-    fetch(&url)
-}
-
 
 #[cfg(test)]
 mod tests {
