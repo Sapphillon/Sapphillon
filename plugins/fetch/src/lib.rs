@@ -21,14 +21,24 @@ use std::string;
 use deno_core::{op2, extension, error::AnyError};
 use anyhow::Result;
 use deno_error::JsErrorBox;
+use sapphillon_core::plugin::CorePluginFunction;
 
-extension! {
+pub fn fetch_plugin() -> CorePluginFunction {
+    CorePluginFunction::new(
+        "app.floorp.core.fetch".to_string(),
+        "Fetch".to_string(),
+        "Fetches the content of a URL using reqwest and returns it as a string.".to_string(),
+        fetch::init
+    )
+}
+
+extension! (
     fetch,
     ops = [
         op2_fetch,
     ],
     esm = ["src/00_fetch.js"],
-}
+);
 
 #[op2]
 #[string]
