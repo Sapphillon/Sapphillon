@@ -28,7 +28,6 @@ use log::{debug, error, info};
 use args::{Args, Command};
 use server::start_server;
 
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();

@@ -2,11 +2,9 @@ use std::env;
 use std::error::Error;
 
 use async_openai::{
-    config::OpenAIConfig,
-    types::{
-        ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
-    },
     Client,
+    config::OpenAIConfig,
+    types::{ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs},
 };
 
 pub fn generate_workflow(user_query: &str) -> Result<String, Box<dyn std::error::Error>> {
@@ -17,7 +15,8 @@ pub fn generate_workflow(user_query: &str) -> Result<String, Box<dyn std::error:
 }
 
 fn generate_prompt(user_query: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let template = format!(r#"
+    let template = format!(
+        r#"
     ## System
 
     あなたは「Workflow Planner and Generator」です。
@@ -103,11 +102,11 @@ fn generate_prompt(user_query: &str) -> Result<String, Box<dyn std::error::Error
     User Query(Task):
     - {user_query}
     - 使用言語: ja-JP
-    "#);
+    "#
+    );
     let prompt = template.replace("{user_query}", user_query);
     Ok(prompt)
 }
-
 
 fn extract_first_code(xml: &str) -> Option<String> {
     let open = "<code>";
@@ -130,7 +129,7 @@ pub fn llm_call(user_query: &str) -> Result<String, Box<dyn Error>> {
 
 pub async fn _llm_call_async(user_query: &str) -> Result<String, Box<dyn Error>> {
     // OpenRouter のエンドポイント
-   let api_base = "https://openrouter.ai/api/v1".to_string();
+    let api_base = "https://openrouter.ai/api/v1".to_string();
     let api_key = env::var("OPENROUTER_API_KEY")?;
 
     let client = Client::with_config(
@@ -162,7 +161,6 @@ pub async fn _llm_call_async(user_query: &str) -> Result<String, Box<dyn Error>>
     Ok(content)
 }
 
-
 #[test]
 fn test_llm_call() -> Result<(), Box<dyn Error>> {
     // async fn ではなく sync ラッパーを使う
@@ -179,7 +177,7 @@ fn test_generate_prompt() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn test_extract_first_code() -> Result<(),Box<dyn Error>> {
+fn test_extract_first_code() -> Result<(), Box<dyn Error>> {
     let result = extract_first_code("<code>Hello World</code>");
     assert_eq!(result, Some("Hello World".to_string()));
     println!("Extracted code: {:?}", result);
