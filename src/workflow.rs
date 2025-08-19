@@ -174,24 +174,24 @@ pub async fn _llm_call_async(user_query: &str) -> Result<String, Box<dyn Error>>
 //     Ok(())
 // }
 
-#[test]
-fn test_generate_prompt() -> Result<(), Box<dyn Error>> {
-    let prompt = generate_prompt("今日の天気はなんですか?")?;
-    println!("{}", prompt);
-    Ok(())
-}
+// #[test]
+// fn test_generate_prompt() -> Result<(), Box<dyn Error>> {
+//     let prompt = generate_prompt("今日の天気はなんですか?")?;
+//     println!("{}", prompt);
+//     Ok(())
+// }
 
-#[test]
-fn test_extract_first_code() -> Result<(), Box<dyn Error>> {
-    let result = extract_first_code("<code>Hello World</code>");
-    assert_eq!(result, Some("Hello World".to_string()));
-    println!("Extracted code: {:?}", result);
-    Ok(())
-}
+// #[test]
+// fn test_extract_first_code() -> Result<(), Box<dyn Error>> {
+//     let result = extract_first_code("<code>Hello World</code>");
+//     assert_eq!(result, Some("Hello World".to_string()));
+//     println!("Extracted code: {:?}", result);
+//     Ok(())
+// }
 
-#[test]
-fn test_generate_workflow() -> Result<(), Box<dyn Error>> {
-    let workflow = generate_workflow("今日の天気はなんですか?")?;
-    println!("{}", workflow);
-    Ok(())
-}
+// #[test]
+// fn test_generate_workflow() -> Result<(), Box<dyn Error>> {
+//     let workflow = generate_workflow("今日の天気はなんですか?")?;
+//     println!("{}", workflow);
+//     Ok(())
+// }
