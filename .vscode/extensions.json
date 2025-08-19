@@ -1,6 +1,5 @@
 {
     "recommendations": [
-        "pbkit.vscode-pbkit",
         "rust-lang.rust-analyzer",
         "vadimcn.vscode-lldb",
         "jscearcy.rust-doc-viewer",
