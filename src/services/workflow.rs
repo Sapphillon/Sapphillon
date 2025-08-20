@@ -26,7 +26,6 @@ use sapphillon_core::proto::sapphillon::v1::{
 use tokio_stream::Stream;
 use std::pin::Pin;
 use crate::workflow::generate_workflow;
-use fetch::fetch_plugin_package;
 
 #[derive(Debug, Default)]
 pub struct MyWorkflowService {}
@@ -99,10 +98,19 @@ impl WorkflowService for MyWorkflowService {
         };
         
         // return the response
+        // stream the single response back to the client
+        let (tx, rx) = tokio::sync::mpsc::channel(1);
 
+        // move the response into a background task so we can return a stream immediately
+        tokio::spawn(async move {
+            // send the response; ignore error if receiver was dropped
+            let _ = tx.send(Ok(response)).await;
+        });
 
+        let stream = tokio_stream::wrappers::ReceiverStream::new(rx);
+        let boxed_stream: Self::GenerateWorkflowStream = Box::pin(stream) as Self::GenerateWorkflowStream;
 
-        Err(tonic::Status::unimplemented("generate_workflow is not implemented"))
+        Ok(tonic::Response::new(boxed_stream))
     }
 }
     
