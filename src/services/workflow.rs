@@ -20,8 +20,10 @@
 use sapphillon_core::proto::sapphillon::v1::workflow_service_server::WorkflowService;
 use sapphillon_core::proto::sapphillon::v1::{
     FixWorkflowRequest, FixWorkflowResponse, GenerateWorkflowRequest, GenerateWorkflowResponse,
-    WorkflowCode, Workflow
+    WorkflowCode, Workflow, RunWorkflowRequest, RunWorkflowResponse
 };
+use sapphillon_core::workflow::CoreWorkflowCode;
+use fetch::fetch_plugin_package;
 
 use tokio_stream::Stream;
 use std::pin::Pin;
@@ -112,5 +114,51 @@ impl WorkflowService for MyWorkflowService {
 
         Ok(tonic::Response::new(boxed_stream))
     }
+    
+
+    async fn run_workflow(
+        &self,
+        request: tonic::Request<RunWorkflowRequest>,
+    ) -> std::result::Result<
+        tonic::Response<RunWorkflowResponse>,
+        tonic::Status,
+    > {
+        let mut workflow = match request.into_inner().workflow_definition.clone() {
+            Some(workflow) => workflow.clone(),
+            None => {
+                return Err(tonic::Status::invalid_argument("Workflow definition is required"));
+            }
+        };
+        let latest_workflow_code_revision = workflow.workflow_code.iter()
+            .map(|code| code.code_revision)
+            .max()
+            .unwrap_or(0);
+        
+        let workflow_code = workflow.workflow_code.iter_mut()
+            .find(|code| code.code_revision == latest_workflow_code_revision)
+            .ok_or_else(|| tonic::Status::not_found("Latest workflow code not found"))?;
+        
+
+        let mut workflow_core = CoreWorkflowCode::new_from_proto(workflow_code, vec![fetch_plugin_package()]);
+        workflow_core.run();
+        
+        let latest_result_revision = workflow_core.result.iter().map(|r| r.workflow_result_revision).max().unwrap_or(0);
+
+        let workflow_core_result_latest = workflow_core.result.iter().find(|r| r.workflow_result_revision == latest_result_revision);
+        
+        let res = RunWorkflowResponse {
+            workflow_result: Some(workflow_core_result_latest.unwrap().clone()),
+            status: Some(sapphillon_core::proto::google::rpc::Status {
+                code: 0,
+                message: "Workflow executed successfully".to_string(),
+                details: vec![],
+            }),
+        };
+        
+        
+        // Return the response
+        Ok(tonic::Response::new(res))
+    }
+
 }
     
