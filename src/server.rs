@@ -23,6 +23,7 @@ use log::info;
 use sapphillon_core::proto::sapphillon::v1::version_service_server::VersionServiceServer;
 use sapphillon_core::proto::sapphillon::v1::workflow_service_server::WorkflowServiceServer;
 use tonic::transport::Server;
+use tower_http::cors::CorsLayer;
 
 pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
@@ -61,11 +62,18 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("gRPC Server starting on {addr}");
 
+    let cors = CorsLayer::new()
+        .allow_origin(tower_http::cors::Any)
+        .allow_methods(tower_http::cors::Any)
+        .allow_headers(tower_http::cors::Any);
+
     Server::builder()
-        .add_service(reflection_service_v1_alpha)
-        .add_service(reflection_service_v1)
-        .add_service(VersionServiceServer::new(version_service))
-        .add_service(WorkflowServiceServer::new(workflow_service))
+        .accept_http1(true)
+        .layer(cors)
+        .add_service(tonic_web::enable(reflection_service_v1_alpha))
+        .add_service(tonic_web::enable(reflection_service_v1))
+        .add_service(tonic_web::enable(VersionServiceServer::new(version_service)))
+        .add_service(tonic_web::enable(WorkflowServiceServer::new(workflow_service)))
         .serve(addr)
         .await?;
 
