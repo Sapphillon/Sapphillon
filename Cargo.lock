@@ -4,13 +4,14 @@ version = 4
 
 [[package]]
 name = "Sapphillon-Controller"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "async-openai",
  "chrono",
  "clap",
  "env_logger",
+ "fetch",
  "log",
  "prost",
  "prost-types",
@@ -19,8 +20,14 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tonic-build",
+ "tonic-reflection",
+ "tonic-web",
+ "tower-http 0.5.2",
+ "unescaper",
+ "uuid",
 ]
 
 [[package]]
@@ -284,8 +291,6 @@ dependencies = [
  "memchr",
  "pin-project-lite",
  "tokio",
- "zstd",
- "zstd-safe",
 ]
 
 [[package]]
@@ -1627,7 +1632,7 @@ dependencies = [
  "tokio-util",
  "tokio-vsock",
  "tower 0.5.2",
- "tower-http",
+ "tower-http 0.6.6",
  "tower-service",
 ]
 
@@ -3017,14 +3022,14 @@ dependencies = [
 
 [[package]]
 name = "fetch"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "deno_core",
  "deno_error",
  "log",
- "reqwest 0.12.23",
  "sapphillon_core",
+ "ureq",
 ]
 
 [[package]]
@@ -5885,14 +5890,9 @@ version = "0.12.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d429f34c8092b2d42c7c93cec323bb4adeb7c67698f70839adec842ec10c7ceb"
 dependencies = [
- "async-compression",
  "base64 0.22.1",
  "bytes",
- "encoding_rs",
- "futures-channel",
  "futures-core",
- "futures-util",
- "h2 0.4.12",
  "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
@@ -5901,7 +5901,6 @@ dependencies = [
  "hyper-util",
  "js-sys",
  "log",
- "mime",
  "percent-encoding",
  "pin-project-lite",
  "quinn",
@@ -5913,9 +5912,8 @@ dependencies = [
  "sync_wrapper 1.0.2",
  "tokio",
  "tokio-rustls 0.26.2",
- "tokio-util",
  "tower 0.5.2",
- "tower-http",
+ "tower-http 0.6.6",
  "tower-service",
  "url",
  "wasm-bindgen",
@@ -6296,8 +6294,8 @@ dependencies = [
 
 [[package]]
 name = "sapphillon_core"
-version = "0.5.0"
-source = "git+ssh://git@github.com/Walkmana-25/Sapphillon-Core.git?tag=v0.5.0-alpha#a873423944a53490eb80e75744e36c15623abf3c"
+version = "0.5.5"
+source = "git+ssh://git@github.com/Walkmana-25/Sapphillon-Core.git?tag=v0.5.5-alpha#b35185ce940f31093b9d271370cc2396025a5abd"
 dependencies = [
  "anyhow",
  "chrono",
@@ -6312,6 +6310,7 @@ dependencies = [
  "tokio",
  "tonic",
  "tonic-build",
+ "unescaper",
 ]
 
 [[package]]
@@ -7222,6 +7221,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "tonic-reflection"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "878d81f52e7fcfd80026b7fdb6a9b578b3c3653ba987f87f0dce4b64043cba27"
+dependencies = [
+ "prost",
+ "prost-types",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+]
+
+[[package]]
+name = "tonic-web"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5299dd20801ad736dccb4a5ea0da7376e59cd98f213bf1c3d478cf53f4834b58"
+dependencies = [
+ "base64 0.22.1",
+ "bytes",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "http-body-util",
+ "pin-project",
+ "tokio-stream",
+ "tonic",
+ "tower-http 0.5.2",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+]
+
+[[package]]
 name = "tower"
 version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7252,6 +7284,22 @@ dependencies = [
  "pin-project-lite",
  "sync_wrapper 1.0.2",
  "tokio",
+ "tower-layer",
+ "tower-service",
+]
+
+[[package]]
+name = "tower-http"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e9cd434a998747dd2c4276bc96ee2e0c7a2eadf3cae88e52be55a05fa9053f5"
+dependencies = [
+ "bitflags 2.9.2",
+ "bytes",
+ "http 1.3.1",
+ "http-body 1.0.1",
+ "http-body-util",
+ "pin-project-lite",
  "tower-layer",
  "tower-service",
 ]
@@ -7372,6 +7420,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
 
 [[package]]
+name = "unescaper"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c01d12e3a56a4432a8b436f293c25f4808bdf9e9f9f98f9260bba1f1bc5a1f26"
+dependencies = [
+ "thiserror 2.0.15",
+]
+
+[[package]]
 name = "unic-char-property"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7469,6 +7526,36 @@ name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
+
+[[package]]
+name = "ureq"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00432f493971db5d8e47a65aeb3b02f8226b9b11f1450ff86bb772776ebadd70"
+dependencies = [
+ "base64 0.22.1",
+ "flate2",
+ "log",
+ "percent-encoding",
+ "rustls 0.23.28",
+ "rustls-pemfile 2.2.0",
+ "rustls-pki-types",
+ "ureq-proto",
+ "utf-8",
+ "webpki-roots 1.0.2",
+]
+
+[[package]]
+name = "ureq-proto"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5b6cabebbecc4c45189ab06b52f956206cea7d8c8a20851c35a85cb169224cc"
+dependencies = [
+ "base64 0.22.1",
+ "http 1.3.1",
+ "httparse",
+ "log",
+]
 
 [[package]]
 name = "url"
@@ -8600,34 +8687,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.106",
-]
-
-[[package]]
-name = "zstd"
-version = "0.13.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e91ee311a569c327171651566e07972200e76fcfe2242a4fa446149a3881c08a"
-dependencies = [
- "zstd-safe",
-]
-
-[[package]]
-name = "zstd-safe"
-version = "7.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f49c4d5f0abb602a93fb8736af2a4f4dd9512e36f7f570d66e65ff867ed3b9d"
-dependencies = [
- "zstd-sys",
-]
-
-[[package]]
-name = "zstd-sys"
-version = "2.0.15+zstd.1.5.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb81183ddd97d0c74cedf1d50d85c8d08c1b8b68ee863bdee9e706eedba1a237"
-dependencies = [
- "cc",
- "pkg-config",
 ]
 
 [[package]]

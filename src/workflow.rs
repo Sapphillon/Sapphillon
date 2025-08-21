@@ -1,3 +1,21 @@
+// Sapphillon
+// Copyright 2025 Yuta Takahashi
+//
+// This file is part of Sapphillon
+//
+// Sapphillon is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 use std::env;
 use std::error::Error;
 
@@ -11,6 +29,15 @@ use async_openai::{
 pub fn generate_workflow(user_query: &str) -> Result<String, Box<dyn std::error::Error>> {
     let prompt = generate_prompt(user_query)?;
     let workflow_raw = llm_call(&prompt)?;
+    let workflow_code = extract_first_code(&workflow_raw);
+    workflow_code.ok_or_else(|| "No code section found in the response".into())
+}
+
+pub async fn generate_workflow_async(
+    user_query: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let prompt = generate_prompt(user_query)?;
+    let workflow_raw = _llm_call_async(&prompt).await?;
     let workflow_code = extract_first_code(&workflow_raw);
     workflow_code.ok_or_else(|| "No code section found in the response".into())
 }
@@ -36,6 +63,7 @@ fn generate_prompt(user_query: &str) -> Result<String, Box<dyn std::error::Error
     - 実際の関数呼び出しや実行結果の表示は行わない。
     - 各ステップにおいて **コメントで意図や処理内容を説明** すること。
     - 必要に応じて例外処理を入れることで、失敗時の理由を明確にする。
+    - 実行結果の出力はすべてconsole.log()を使用すること。
 
     ### ワークフロー設計ガイドライン
     1. **目的の正確な理解**  

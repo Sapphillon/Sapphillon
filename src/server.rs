@@ -18,19 +18,116 @@
 
 // gRPC server startup logic
 
-use crate::services::MyVersionService;
+use crate::services::{MyVersionService, MyWorkflowService};
 use log::info;
 use sapphillon_core::proto::sapphillon::v1::version_service_server::VersionServiceServer;
+use sapphillon_core::proto::sapphillon::v1::workflow_service_server::WorkflowServiceServer;
 use tonic::transport::Server;
+use tower_http::cors::CorsLayer;
 
 pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
-    let version_service = MyVersionService;
+    let version_service = MyVersionService {};
+    let workflow_service = MyWorkflowService {};
+
+    let reflection_service_v1 = tonic_reflection::server::Builder::configure()
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::sapphillon::v1::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::rpc::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::rpc::context::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::r#type::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::api::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::api::expr::v1alpha1::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::api::expr::v1beta1::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::bytestream::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::longrunning::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::geo::r#type::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::protobuf::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::protobuf::compiler::FILE_DESCRIPTOR_SET,
+        )
+        .build_v1()
+        .unwrap();
+
+    let reflection_service_v1_alpha = tonic_reflection::server::Builder::configure()
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::sapphillon::v1::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::rpc::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::rpc::context::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::r#type::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::api::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::api::expr::v1alpha1::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::api::expr::v1beta1::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::bytestream::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::longrunning::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::geo::r#type::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::protobuf::FILE_DESCRIPTOR_SET,
+        )
+        .register_encoded_file_descriptor_set(
+            sapphillon_core::proto::google::protobuf::compiler::FILE_DESCRIPTOR_SET,
+        )
+        .build_v1alpha()
+        .unwrap();
 
     info!("gRPC Server starting on {addr}");
 
+    let cors = CorsLayer::new()
+        .allow_origin(tower_http::cors::Any)
+        .allow_methods(tower_http::cors::Any)
+        .allow_headers(tower_http::cors::Any);
+
     Server::builder()
-        .add_service(VersionServiceServer::new(version_service))
+        .accept_http1(true)
+        .layer(cors)
+        .add_service(tonic_web::enable(reflection_service_v1_alpha))
+        .add_service(tonic_web::enable(reflection_service_v1))
+        .add_service(tonic_web::enable(VersionServiceServer::new(
+            version_service,
+        )))
+        .add_service(tonic_web::enable(WorkflowServiceServer::new(
+            workflow_service,
+        )))
         .serve(addr)
         .await?;
 

@@ -15,4 +15,4 @@ log.workspace = true
 deno_core.workspace = true
 deno_error.workspace = true
 sapphillon_core.workspace = true
-reqwest = { version = "0.12.23", default-features = false, features = ["http2", "rustls-tls", "charset", "zstd", "gzip", "blocking"] }
+ureq = "3.1.0"

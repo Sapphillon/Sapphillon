@@ -19,4 +19,6 @@
 // Service root module
 
 mod version;
+mod workflow;
 pub use version::*;
+pub use workflow::*;
