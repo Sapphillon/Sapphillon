@@ -16,8 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
-use anyhow::Result;
-use deno_core::{error::AnyError, op2};
+use deno_core::op2;
 use deno_error::JsErrorBox;
 use sapphillon_core::plugin::{CorePluginFunction, CorePluginPackage};
 
@@ -41,22 +40,19 @@ pub fn fetch_plugin_package() -> CorePluginPackage {
 
 #[op2]
 #[string]
-fn op2_fetch(#[string] url: String) -> Result<String, JsErrorBox> {
-    let result = fetch(&url);
-    match result {
+fn op2_fetch(#[string] url: String) -> std::result::Result<String, JsErrorBox> {
+    match fetch(&url) {
         Ok(body) => Ok(body),
         Err(e) => Err(JsErrorBox::new("Error", e.to_string())),
     }
 }
 
-fn fetch(url: &str) -> Result<String> {
-    let response = reqwest::blocking::get(url)?;
-    if response.status().is_success() {
-        let body = response.text()?;
-        Ok(body)
-    } else {
-        Err(AnyError::msg(format!("Failed to fetch URL: {url}")))
-    }
+fn fetch(url: &str) -> anyhow::Result<String> {
+    let body = ureq::get(url)
+        .call()?
+        .body_mut()
+        .read_to_string()?;
+    Ok(body)
 }
 
 #[cfg(test)]
