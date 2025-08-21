@@ -16,6 +16,9 @@ members = [
     "plugins/*",
 ]
 
+[patch.crates-io]
+libffi-sys = { path = "patches/libffi-sys" }
+
 [workspace.dependencies]
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }

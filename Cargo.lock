@@ -4425,10 +4425,10 @@ dependencies = [
 [[package]]
 name = "libffi-sys"
 version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ead36a2496acfc8edd6cc32352110e9478ac5b9b5f5b9856ebd3d28019addb84"
 dependencies = [
- "cc",
+ "bindgen 0.69.5",
+ "libc",
+ "pkg-config",
 ]
 
 [[package]]
