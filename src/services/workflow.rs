@@ -30,7 +30,7 @@ use std::pin::Pin;
 use crate::workflow::generate_workflow;
 
 #[derive(Debug, Default)]
-pub struct MyWorkflowService {}
+pub struct MyWorkflowService;
 
 #[tonic::async_trait]
 impl WorkflowService for MyWorkflowService {

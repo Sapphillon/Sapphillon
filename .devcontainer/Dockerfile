@@ -34,5 +34,6 @@ ENV RUSTFLAGS="-C link-arg=-fuse-ld=mold"
 
 
 RUN go install github.com/ktr0731/evans@latest \
-    && go install github.com/bufbuild/buf/cmd/buf@latest
+    && go install github.com/bufbuild/buf/cmd/buf@latest \
+    && go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
 
