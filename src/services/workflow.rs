@@ -27,7 +27,7 @@ use fetch::fetch_plugin_package;
 
 use tokio_stream::Stream;
 use std::pin::Pin;
-use crate::workflow::generate_workflow;
+use crate::workflow::generate_workflow_async;
 
 #[derive(Debug, Default)]
 pub struct MyWorkflowService;
@@ -63,7 +63,8 @@ impl WorkflowService for MyWorkflowService {
         let prompt = request.into_inner().prompt;
         
         // Generate Workflow Code
-        let workflow_code_raw = generate_workflow(&prompt)
+        let workflow_code_raw = generate_workflow_async(&prompt)
+            .await
             .map_err(|e| tonic::Status::internal(format!("Failed to generate workflow: {e}")))?;
         
         let workflow_code = WorkflowCode {
