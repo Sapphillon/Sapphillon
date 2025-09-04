@@ -19,8 +19,10 @@
 use fetch::fetch_plugin_package;
 use sapphillon_core::proto::sapphillon::v1::workflow_service_server::WorkflowService;
 use sapphillon_core::proto::sapphillon::v1::{
-    FixWorkflowRequest, FixWorkflowResponse, GenerateWorkflowRequest, GenerateWorkflowResponse,
-    RunWorkflowRequest, RunWorkflowResponse, Workflow, WorkflowCode,
+    DeleteWorkflowRequest, DeleteWorkflowResponse, FixWorkflowRequest, FixWorkflowResponse,
+    GenerateWorkflowRequest, GenerateWorkflowResponse, GetWorkflowRequest, GetWorkflowResponse,
+    ListWorkflowsRequest, ListWorkflowsResponse, RunWorkflowRequest, RunWorkflowResponse,
+    UpdateWorkflowRequest, UpdateWorkflowResponse, Workflow, WorkflowCode,
 };
 use sapphillon_core::workflow::CoreWorkflowCode;
 
@@ -48,6 +50,36 @@ impl WorkflowService for MyWorkflowService {
         >,
     >;
 
+    async fn update_workflow(
+        &self,
+        request: tonic::Request<UpdateWorkflowRequest>,
+    ) -> std::result::Result<tonic::Response<UpdateWorkflowResponse>, tonic::Status> {
+        // 未実装のためエラーを返す
+        let _ = request;
+        Err(tonic::Status::unimplemented(
+            "update_workflow is not implemented",
+        ))
+    }
+    async fn delete_workflow(
+        &self,
+        request: tonic::Request<DeleteWorkflowRequest>,
+    ) -> std::result::Result<tonic::Response<DeleteWorkflowResponse>, tonic::Status> {
+        // 未実装のためエラーを返す
+        let _ = request;
+        Err(tonic::Status::unimplemented(
+            "delete_workflow is not implemented",
+        ))
+    }
+    async fn list_workflows(
+        &self,
+        request: tonic::Request<ListWorkflowsRequest>,
+    ) -> std::result::Result<tonic::Response<ListWorkflowsResponse>, tonic::Status> {
+        // 未実装のためエラーを返す
+        let _ = request;
+        Err(tonic::Status::unimplemented(
+            "list_workflow is not implemented",
+        ))
+    }
     async fn fix_workflow(
         &self,
         request: tonic::Request<FixWorkflowRequest>,
@@ -59,6 +91,16 @@ impl WorkflowService for MyWorkflowService {
         ))
     }
 
+    async fn get_workflow(
+        &self,
+        request: tonic::Request<GetWorkflowRequest>,
+    ) -> std::result::Result<tonic::Response<GetWorkflowResponse>, tonic::Status> {
+        // 未実装のためエラーを返す
+        let _ = request;
+        Err(tonic::Status::unimplemented(
+            "get_workflow is not implemented",
+        ))
+    }
     async fn generate_workflow(
         &self,
         request: tonic::Request<GenerateWorkflowRequest>,
@@ -82,6 +124,7 @@ impl WorkflowService for MyWorkflowService {
             required_permissions: vec![],
             plugin_packages: vec![],
             plugin_function_ids: vec![],
+            allowed_permissions: vec![],
         };
 
         let workflow = Workflow {
@@ -125,12 +168,34 @@ impl WorkflowService for MyWorkflowService {
         &self,
         request: tonic::Request<RunWorkflowRequest>,
     ) -> std::result::Result<tonic::Response<RunWorkflowResponse>, tonic::Status> {
-        let mut workflow = match request.into_inner().workflow_definition.clone() {
-            Some(workflow) => workflow.clone(),
-            None => {
-                return Err(tonic::Status::invalid_argument(
-                    "Workflow definition is required",
-                ));
+        let req = request.into_inner();
+        if req.workflow_id.is_empty() && req.workflow_code_id.is_empty() {
+            return Err(tonic::Status::invalid_argument(
+                "Either workflow_id or workflow_code_id is required",
+            ));
+        }
+        // Construct a placeholder Workflow until a real storage lookup is implemented.
+        let mut workflow = if !req.workflow_id.is_empty() {
+            Workflow {
+                id: req.workflow_id.clone(),
+                ..Default::default()
+            }
+        } else {
+            let wc = WorkflowCode {
+                id: req.workflow_code_id.clone(),
+                code_revision: 1,
+                code: "".to_string(),
+                language: 0,
+                created_at: None,
+                result: vec![],
+                required_permissions: vec![],
+                plugin_packages: vec![],
+                plugin_function_ids: vec![],
+                allowed_permissions: vec![],
+            };
+            Workflow {
+                workflow_code: vec![wc],
+                ..Default::default()
             }
         };
         let latest_workflow_code_revision = workflow
@@ -149,8 +214,12 @@ impl WorkflowService for MyWorkflowService {
 
         log::debug!("Parsed workflow code: {}", workflow_code.code);
 
-        let mut workflow_core =
-            CoreWorkflowCode::new_from_proto(workflow_code, vec![fetch_plugin_package()]);
+        let mut workflow_core = CoreWorkflowCode::new_from_proto(
+            workflow_code,
+            vec![fetch_plugin_package()],
+            None,
+            None,
+        );
         workflow_core.run();
 
         let latest_result_revision = workflow_core
