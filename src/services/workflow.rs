@@ -20,7 +20,7 @@ use fetch::fetch_plugin_package;
 use sapphillon_core::proto::sapphillon::v1::workflow_service_server::WorkflowService;
 use sapphillon_core::proto::sapphillon::v1::{
     FixWorkflowRequest, FixWorkflowResponse, GenerateWorkflowRequest, GenerateWorkflowResponse,
-    RunWorkflowRequest, RunWorkflowResponse, Workflow, WorkflowCode,
+    RunWorkflowRequest, RunWorkflowResponse, Workflow, WorkflowCode, GetWorkflowRequest, GetWorkflowResponse, ListWorkflowsRequest, ListWorkflowsResponse, DeleteWorkflowRequest, DeleteWorkflowResponse, UpdateWorkflowRequest, UpdateWorkflowResponse,
 };
 use sapphillon_core::workflow::CoreWorkflowCode;
 
@@ -48,6 +48,36 @@ impl WorkflowService for MyWorkflowService {
         >,
     >;
 
+    async fn update_workflow(
+        &self,
+        request: tonic::Request<UpdateWorkflowRequest>,
+    ) -> std::result::Result<tonic::Response<UpdateWorkflowResponse>, tonic::Status> {
+        // 未実装のためエラーを返す
+        let _ = request;
+        Err(tonic::Status::unimplemented(
+            "update_workflow is not implemented",
+        ))
+    }
+    async fn delete_workflow(
+        &self,
+        request: tonic::Request<DeleteWorkflowRequest>,
+    ) -> std::result::Result<tonic::Response<DeleteWorkflowResponse>, tonic::Status> {
+        // 未実装のためエラーを返す
+        let _ = request;
+        Err(tonic::Status::unimplemented(
+            "delete_workflow is not implemented",
+        ))
+    }
+    async fn list_workflows(
+        &self,
+        request: tonic::Request<ListWorkflowsRequest>,
+    ) -> std::result::Result<tonic::Response<ListWorkflowsResponse>, tonic::Status> {
+        // 未実装のためエラーを返す
+        let _ = request;
+        Err(tonic::Status::unimplemented(
+            "list_workflow is not implemented",
+        ))
+    }
     async fn fix_workflow(
         &self,
         request: tonic::Request<FixWorkflowRequest>,
@@ -59,6 +89,16 @@ impl WorkflowService for MyWorkflowService {
         ))
     }
 
+    async fn get_workflow(
+        &self,
+        request: tonic::Request<GetWorkflowRequest>,
+    ) -> std::result::Result<tonic::Response<GetWorkflowResponse>, tonic::Status> {
+        // 未実装のためエラーを返す
+        let _ = request;
+        Err(tonic::Status::unimplemented(
+            "get_workflow is not implemented",
+        ))
+    }
     async fn generate_workflow(
         &self,
         request: tonic::Request<GenerateWorkflowRequest>,
@@ -71,6 +111,7 @@ impl WorkflowService for MyWorkflowService {
             .await
             .map_err(|e| tonic::Status::internal(format!("Failed to generate workflow: {e}")))?;
         let workflow_code_raw = workflow_code_raw + "workflow();";
+
 
         let workflow_code = WorkflowCode {
             id: uuid::Uuid::new_v4().to_string(),
