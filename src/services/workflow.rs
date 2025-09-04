@@ -123,6 +123,7 @@ impl WorkflowService for MyWorkflowService {
             required_permissions: vec![],
             plugin_packages: vec![],
             plugin_function_ids: vec![],
+            allowed_permissions: vec![],
         };
 
         let workflow = Workflow {
@@ -191,7 +192,7 @@ impl WorkflowService for MyWorkflowService {
         log::debug!("Parsed workflow code: {}", workflow_code.code);
 
         let mut workflow_core =
-            CoreWorkflowCode::new_from_proto(workflow_code, vec![fetch_plugin_package()]);
+            CoreWorkflowCode::new_from_proto(workflow_code, vec![fetch_plugin_package()], None, None);
         workflow_core.run();
 
         let latest_result_revision = workflow_core
