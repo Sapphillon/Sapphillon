@@ -88,6 +88,9 @@ fn generate_prompt(user_query: &str) -> Result<String, Box<dyn std::error::Error
 
     ### 利用可能なTool
     - `fetch(url: str) -> {{body: str}}`
+    - `browser_info() -> {{user_agent: str, language: str, platform: str}}`
+    - `tab_manager(action: str, url: Optional[str]) -> {{success: bool, message: str}}`
+    - `webscraper(url: str) -> {{content: str}}`
 
     ---
 

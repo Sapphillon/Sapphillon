@@ -14,6 +14,7 @@ homepage = "https://github.com/Walkmana-25/Sapphillon"
 resolver = "3"
 members = [
     "plugins/*",
+    "grpc", # Add grpc as a workspace member
 ]
 
 [patch.crates-io]
@@ -28,6 +29,8 @@ log = "0.4"
 env_logger = "0.11"
 deno_core = "0.355.0"
 deno_error = "0.7.0"
+serde = { version = "1.0", features = ["derive"] } # Add serde to workspace dependencies
+serde_json = "1.0" # Add serde_json to workspace dependencies
 
 tonic = "0.12.0"
 prost = "0.13.1"
@@ -64,12 +67,16 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio-stream = "0.1.17"
 
+floorp-plugin-browser-info = {path = "./plugins/browser_info"}
 fetch = {path = "./plugins/fetch"}
+floorp-plugin-tab-manager = {path = "./plugins/tab_manager"}
+floorp-plugin-webscraper = {path = "./plugins/webscraper"}
 uuid = "1.18.0"
 tonic-reflection = "0.12.0"
 tower-http = { version = "0.5.2", features = ["cors"] }
 tonic-web = "0.12.0"
 unescaper = "0.1.6"
+floorp-grpc = { path = "./grpc" } # Add floorp-grpc to main dependencies
 
 
 [build-dependencies]

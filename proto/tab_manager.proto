@@ -1,0 +1,391 @@
+// Copyright 2025 Yuta Takahashi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package sapphillon.v1.tabmanager;
+
+import "google/protobuf/timestamp.proto";
+
+// Options for creating a new tab
+message CreateTabOptions {
+  // Whether to open tab in background
+  optional bool in_background = 1;
+}
+
+// Request to create a new visible tab
+message CreateInstanceRequest {
+  // URL to open in new tab
+  string url = 1;
+
+  // Optional creation options
+  optional CreateTabOptions options = 2;
+}
+
+// Response containing new tab instance ID
+message CreateInstanceResponse {
+  // Instance ID for the new tab
+  string instance_id = 1;
+}
+
+// Request to attach to existing tab
+message AttachToTabRequest {
+  // Browser ID of the existing tab
+  string browser_id = 1;
+}
+
+// Response for attach operation
+message AttachToTabResponse {
+  // Instance ID for the attached tab (null if failed)
+  optional string instance_id = 1;
+}
+
+// Request to list all visible tabs
+message ListTabsRequest {}
+
+// Response containing tabs information
+message ListTabsResponse {
+  // Array of detailed tab information (instead of JSON string)
+  repeated DetailedTabInfo tabs = 1;
+}
+
+// Request to get instance information
+message GetInstanceInfoRequest {
+  // Instance ID
+  string instance_id = 1;
+}
+
+// Response containing aggregated instance information
+message GetInstanceInfoResponse {
+  // JSON string containing URI, title, favicon, HTML, screenshot
+  optional string instance_info = 1;
+}
+
+// Request to close tab
+message DestroyInstanceRequest {
+  // Instance ID to destroy
+  string instance_id = 1;
+}
+
+// Response for destroy operation
+message DestroyInstanceResponse {
+  // Success status
+  bool success = 1;
+}
+
+// Request to navigate tab
+message NavigateRequest {
+  // Instance ID
+  string instance_id = 1;
+
+  // Target URL
+  string url = 2;
+}
+
+// Response for navigation
+message NavigateResponse {
+  // Success status
+  bool success = 1;
+  
+  // Error message if navigation failed
+  optional string error_message = 2;
+}
+
+// Request to get current URI
+message GetURIRequest {
+  // Instance ID
+  string instance_id = 1;
+}
+
+// Response containing current URI
+message GetURIResponse {
+  // Current URI of the tab
+  string uri = 1;
+}
+
+// Request to get HTML content
+message GetHTMLRequest {
+  // Instance ID
+  string instance_id = 1;
+}
+
+// Response containing HTML
+message GetHTMLResponse {
+  // Full document HTML
+  optional string html = 1;
+}
+
+// Request to get element by selector
+message GetElementRequest {
+  // Instance ID
+  string instance_id = 1;
+
+  // CSS selector
+  string selector = 2;
+}
+
+// Response containing element HTML
+message GetElementResponse {
+  // Element's outerHTML
+  optional string element_html = 1;
+}
+
+// Request to get element text
+message GetElementTextRequest {
+  // Instance ID
+  string instance_id = 1;
+
+  // CSS selector
+  string selector = 2;
+}
+
+// Response containing element text
+message GetElementTextResponse {
+  // Element's textContent
+  optional string text = 1;
+}
+
+// Request to get input value
+message GetValueRequest {
+  // Instance ID
+  string instance_id = 1;
+
+  // CSS selector
+  string selector = 2;
+}
+
+// Response containing input value
+message GetValueResponse {
+  // Input/textarea value
+  optional string value = 1;
+}
+
+// Request to click element
+message ClickElementRequest {
+  // Instance ID
+  string instance_id = 1;
+
+  // CSS selector
+  string selector = 2;
+}
+
+// Response for click operation
+message ClickElementResponse {
+  // Whether click was successful
+  bool success = 1;
+}
+
+// Request to wait for element
+message WaitForElementRequest {
+  // Instance ID
+  string instance_id = 1;
+  
+  // CSS selector
+  string selector = 2;
+  
+  // Timeout in milliseconds (optional)
+  optional int32 timeout = 3;
+}
+
+// Response for wait operation
+message WaitForElementResponse {
+  // Whether element appeared within timeout
+  bool found = 1;
+}
+
+// Request to execute JavaScript
+message ExecuteScriptRequest {
+  // Instance ID
+  string instance_id = 1;
+
+  // JavaScript code to execute
+  string script = 2;
+}
+
+// Response for script execution
+message ExecuteScriptResponse {
+  // Success status
+  bool success = 1;
+  
+  // Error message if execution failed
+  optional string error_message = 2;
+}
+
+// Screenshot rectangle specification
+message ScreenshotRect {
+  // X coordinate
+  optional int32 x = 1;
+
+  // Y coordinate
+  optional int32 y = 2;
+
+  // Width
+  optional int32 width = 3;
+
+  // Height
+  optional int32 height = 4;
+}
+
+// Request to take screenshot
+message TakeScreenshotRequest {
+  // Instance ID
+  string instance_id = 1;
+  
+  // Screenshot type
+  ScreenshotType type = 2;
+
+  // CSS selector for element screenshots
+  optional string selector = 3;
+  
+  // Rectangle for region screenshots
+  optional ScreenshotRect rect = 4;
+}
+
+// Screenshot type enumeration
+enum ScreenshotType {
+  SCREENSHOT_TYPE_UNSPECIFIED = 0;
+  SCREENSHOT_TYPE_VIEWPORT = 1;
+  SCREENSHOT_TYPE_ELEMENT = 2;
+  SCREENSHOT_TYPE_FULL_PAGE = 3;
+  SCREENSHOT_TYPE_REGION = 4;
+}
+
+// Response containing screenshot
+message TakeScreenshotResponse {
+  // PNG dataURL screenshot
+  optional string screenshot_data = 1;
+}
+
+// Request to fill form
+message FillFormRequest {
+  // Instance ID
+  string instance_id = 1;
+  
+  // Map of selector to value
+  map<string, string> form_data = 2;
+}
+
+// Response for fill form operation
+message FillFormResponse {
+  // Whether form filling was successful
+  bool success = 1;
+}
+
+// Request to submit form
+message SubmitFormRequest {
+  // Instance ID
+  string instance_id = 1;
+  
+  // CSS selector
+  string selector = 2;
+}
+
+// Response for form submission
+message SubmitFormResponse {
+  // Whether submission was successful
+  bool success = 1;
+}
+
+// Request to wait/sleep
+message WaitRequest {
+  // Milliseconds to wait
+  int32 milliseconds = 1;
+}
+
+// Response for wait operation
+message WaitResponse {
+  // Success status
+  bool success = 1;
+}
+
+// Detailed tab information
+message DetailedTabInfo {
+  // Instance ID
+  string instance_id = 1;
+  
+  // Browser-assigned tab ID
+  string browser_id = 2;
+  
+  // Current URI
+  string uri = 3;
+
+  // Page title
+  string title = 4;
+
+  // Favicon URL
+  optional string favicon_url = 5;
+
+  // Whether tab is active
+  bool is_active = 6;
+
+  // Creation timestamp
+  google.protobuf.Timestamp created_at = 7;
+
+  // Last update timestamp
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// Tab Manager Service (Visible tab operations)
+service TabManagerService {
+  // Create a new visible tab
+  rpc CreateInstance(CreateInstanceRequest) returns (CreateInstanceResponse);
+
+  // Attach to existing visible tab
+  rpc AttachToTab(AttachToTabRequest) returns (AttachToTabResponse);
+
+  // List all visible tabs
+  rpc ListTabs(ListTabsRequest) returns (ListTabsResponse);
+
+  // Get aggregated instance information
+  rpc GetInstanceInfo(GetInstanceInfoRequest) returns (GetInstanceInfoResponse);
+
+  // Close tab
+  rpc DestroyInstance(DestroyInstanceRequest) returns (DestroyInstanceResponse);
+
+  // Navigate tab
+  rpc Navigate(NavigateRequest) returns (NavigateResponse);
+
+  // Get current URI
+  rpc GetURI(GetURIRequest) returns (GetURIResponse);
+
+  // Get document HTML
+  rpc GetHTML(GetHTMLRequest) returns (GetHTMLResponse);
+
+  // Get element by selector
+  rpc GetElement(GetElementRequest) returns (GetElementResponse);
+
+  // Get element text content
+  rpc GetElementText(GetElementTextRequest) returns (GetElementTextResponse);
+
+  // Get input/textarea value
+  rpc GetValue(GetValueRequest) returns (GetValueResponse);
+
+  // Click element
+  rpc ClickElement(ClickElementRequest) returns (ClickElementResponse);
+
+  // Wait for element to appear
+  rpc WaitForElement(WaitForElementRequest) returns (WaitForElementResponse);
+
+  // Execute JavaScript
+  rpc ExecuteScript(ExecuteScriptRequest) returns (ExecuteScriptResponse);
+
+  // Take screenshot
+  rpc TakeScreenshot(TakeScreenshotRequest) returns (TakeScreenshotResponse);
+
+  // Fill form fields
+  rpc FillForm(FillFormRequest) returns (FillFormResponse);
+
+  // Submit form
+  rpc SubmitForm(SubmitFormRequest) returns (SubmitFormResponse);
+}

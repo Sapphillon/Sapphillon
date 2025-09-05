@@ -1,0 +1,134 @@
+// Copyright 2025 Yuta Takahashi
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package sapphillon.v1.floorpBrowserInfo;
+
+import "google/protobuf/timestamp.proto";
+
+// Parameters for getting browser context data
+message GetContextDataParams {
+  // Limit for history entries (optional)
+  optional int32 history_limit = 1;
+
+  // Limit for download entries (optional)
+  optional int32 download_limit = 2;
+}
+
+// Request to get all browser context data
+message GetAllContextDataRequest {
+  // Optional parameters for limiting data
+  optional GetContextDataParams params = 1;
+}
+
+// Response containing all browser context data
+message GetAllContextDataResponse {
+  // JSON string containing recent history, tabs and downloads
+  // null if error occurred
+  optional string context_data = 1;
+
+  // Indicates if the operation was successful
+  bool success = 2;
+
+  // Error message if operation failed
+  optional string error_message = 3;
+}
+
+// Browser history entry
+message HistoryEntry {
+  // URL of the page
+  string url = 1;
+
+  // Title of the page
+  string title = 2;
+
+  // Last visit timestamp
+  google.protobuf.Timestamp last_visit = 3;
+
+  // Number of visits
+  int32 visit_count = 4;
+}
+
+// Browser download entry
+message DownloadEntry {
+  // Download ID
+  string id = 1;
+
+  // File name
+  string filename = 2;
+
+  // Download URL
+  string url = 3;
+
+  // File size in bytes
+  int64 size = 4;
+
+  // Download start time
+  google.protobuf.Timestamp start_time = 5;
+
+  // Download completion time (if completed)
+  optional google.protobuf.Timestamp completion_time = 6;
+
+  // Download status
+  DownloadStatus status = 7;
+}
+
+// Download status enumeration
+enum DownloadStatus {
+  DOWNLOAD_STATUS_UNSPECIFIED = 0;
+  DOWNLOAD_STATUS_IN_PROGRESS = 1;
+  DOWNLOAD_STATUS_COMPLETED = 2;
+  DOWNLOAD_STATUS_CANCELLED = 3;
+  DOWNLOAD_STATUS_FAILED = 4;
+}
+
+// Structured browser context data
+message BrowserContextData {
+  // Browser history entries
+  repeated HistoryEntry history = 1;
+
+  // Download entries
+  repeated DownloadEntry downloads = 2;
+
+  // Currently open tabs
+  repeated TabInfo tabs = 3;
+
+  // Timestamp when this data was collected
+  google.protobuf.Timestamp collected_at = 4;
+}
+
+// Tab information
+message TabInfo {
+  // Browser-assigned tab ID (converted to string)
+  string id = 1;
+
+  // Current URL
+  string url = 2;
+
+  // Page title (falls back to URL if no title)
+  string title = 3;
+
+  // Whether this tab is currently active/selected
+  bool is_active = 4;
+
+  // Whether this tab is pinned
+  bool is_pinned = 5;
+}
+
+// Browser Information Service
+service BrowserInfoService {
+  // Get all browser context data as JSON string
+  rpc GetAllContextData(GetAllContextDataRequest) returns (GetAllContextDataResponse);
+}

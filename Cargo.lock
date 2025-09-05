@@ -12,6 +12,10 @@ dependencies = [
  "clap",
  "env_logger",
  "fetch",
+ "floorp-grpc",
+ "floorp-plugin-browser-info",
+ "floorp-plugin-tab-manager",
+ "floorp-plugin-webscraper",
  "log",
  "prost",
  "prost-types",
@@ -3089,6 +3093,61 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b09cf3155332e944990140d967ff5eceb70df778b34f77d8075db46e4704e6d8"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "floorp-grpc"
+version = "0.1.0"
+dependencies = [
+ "prost",
+ "prost-types",
+ "tonic",
+ "tonic-build",
+]
+
+[[package]]
+name = "floorp-plugin-browser-info"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "deno_core",
+ "deno_error",
+ "floorp-grpc",
+ "log",
+ "sapphillon_core",
+ "serde",
+ "serde_json",
+ "tonic",
+]
+
+[[package]]
+name = "floorp-plugin-tab-manager"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "deno_core",
+ "deno_error",
+ "floorp-grpc",
+ "log",
+ "sapphillon_core",
+ "serde",
+ "serde_json",
+ "tonic",
+]
+
+[[package]]
+name = "floorp-plugin-webscraper"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "deno_core",
+ "deno_error",
+ "floorp-grpc",
+ "log",
+ "sapphillon_core",
+ "serde",
+ "serde_json",
+ "tonic",
 ]
 
 [[package]]

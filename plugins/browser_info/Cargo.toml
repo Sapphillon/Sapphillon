@@ -1,0 +1,15 @@
+[package]
+name = "floorp-plugin-browser-info"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+log = { workspace = true }
+deno_core = { workspace = true }
+deno_error = { workspace = true }
+sapphillon_core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tonic = { workspace = true }
+floorp-grpc = { path = "../../grpc" }
