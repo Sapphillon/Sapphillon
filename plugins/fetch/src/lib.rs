@@ -16,10 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
-use deno_core::op2;
+use deno_core::{op2, OpState};
 use deno_error::JsErrorBox;
 use sapphillon_core::plugin::{CorePluginFunction, CorePluginPackage};
+use sapphillon_core::proto::sapphillon;
 use sapphillon_core::proto::sapphillon::v1::{PluginFunction, PluginPackage, Permission, PermissionType, PermissionLevel};
+use sapphillon_core::permission::{check_permission, CheckPermissionResult, PluginFunctionPermissions};
+use sapphillon_core::runtime::OpStateWorkflowData;
 
 
 pub fn fetch_plugin_function() -> PluginFunction {
@@ -69,7 +72,35 @@ pub fn core_fetch_plugin_package() -> CorePluginPackage {
 
 #[op2]
 #[string]
-fn op2_fetch(#[string] url: String) -> std::result::Result<String, JsErrorBox> {
+fn op2_fetch(state: &mut OpState, #[string] url: String) -> std::result::Result<String, JsErrorBox> {
+    // Permission Check
+    
+    // Requrements Permission of this func
+    let mut perm = fetch_plugin_permissions();
+    perm[0].resource = vec![url.clone()];
+
+    let required_permissions = sapphillon_core::permission::Permissions { permissions: perm };
+
+    // Allowed Permission in this func
+    let allowed_permissions = {
+        let data = state.borrow::<OpStateWorkflowData>();
+        let permissions = data.get_allowed_permissions().clone().unwrap_or_else(|| vec![PluginFunctionPermissions {
+            plugin_function_id: fetch_plugin_function().function_id,
+            permissions: sapphillon_core::permission::Permissions { permissions: vec![] },
+        }]);
+        
+        permissions.into_iter().find(|p| p.plugin_function_id == fetch_plugin_function().function_id)
+            .map(|p| p.permissions)
+            .unwrap_or_else(|| sapphillon_core::permission::Permissions { permissions: vec![] })
+        
+    };
+    
+    let permission_check_result = check_permission(&required_permissions, &allowed_permissions);
+
+    if let CheckPermissionResult::MissingPermission(perm) = permission_check_result {
+        return Err(JsErrorBox::new("PermissionDenied. Missing Permissions:", perm.to_string()));
+    }
+
     match fetch(&url) {
         Ok(body) => Ok(body),
         Err(e) => Err(JsErrorBox::new("Error", e.to_string())),
