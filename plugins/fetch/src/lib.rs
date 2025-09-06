@@ -185,7 +185,7 @@ mod tests {
         };
 
         // Build a WorkflowCode proto and set allowed_permissions so the runtime receives them.
-        let mut workflow_code = sapphillon_core::proto::sapphillon::v1::WorkflowCode {
+        let workflow_code = sapphillon_core::proto::sapphillon::v1::WorkflowCode {
             id: "test".to_string(),
             code_revision: 1,
             code: code.to_string(),
@@ -198,7 +198,7 @@ mod tests {
         };
 
         let mut workflow = CoreWorkflowCode::new_from_proto(
-            &mut workflow_code,
+            &workflow_code,
             vec![core_fetch_plugin_package()],
             None,
             None,
