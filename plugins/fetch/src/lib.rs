@@ -95,7 +95,7 @@ fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> 
                     },
                 }]
             });
- 
+
         permissions_vec
             .into_iter()
             .find(|p| p.plugin_function_id == fetch_plugin_function().function_id)
@@ -168,10 +168,10 @@ mod tests {
             const response = fetch(url);
             console.log(response);
         "#;
- 
+
         // Provide allowed permissions so permission_check inside the plugin passes.
         let url = "https://dummyjson.com/test".to_string();
- 
+
         // Construct proto AllowedPermission so WorkflowCode.allowed_permissions has the expected type.
         let proto_allowed = sapphillon_core::proto::sapphillon::v1::AllowedPermission {
             plugin_function_id: fetch_plugin_function().function_id,
@@ -183,7 +183,7 @@ mod tests {
                 resource: vec![url.clone()],
             }],
         };
- 
+
         // Build a WorkflowCode proto and set allowed_permissions so the runtime receives them.
         let mut workflow_code = sapphillon_core::proto::sapphillon::v1::WorkflowCode {
             id: "test".to_string(),
@@ -196,7 +196,7 @@ mod tests {
             plugin_function_ids: vec![],
             allowed_permissions: vec![proto_allowed],
         };
- 
+
         let mut workflow = CoreWorkflowCode::new_from_proto(
             &mut workflow_code,
             vec![core_fetch_plugin_package()],
@@ -205,9 +205,9 @@ mod tests {
         );
         workflow.run();
         assert_eq!(workflow.result.len(), 1);
- 
+
         let expected = fetch(&url).unwrap() + "\n";
- 
+
         let actual = &workflow.result[0].result;
         // Accept either a successful fetch result or a permission-denied message depending on test environment.
         assert!(
