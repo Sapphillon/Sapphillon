@@ -16,20 +16,23 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
-use deno_core::{op2, OpState};
+use deno_core::{OpState, op2};
 use deno_error::JsErrorBox;
+use sapphillon_core::permission::{
+    CheckPermissionResult, PluginFunctionPermissions, check_permission,
+};
 use sapphillon_core::plugin::{CorePluginFunction, CorePluginPackage};
-use sapphillon_core::proto::sapphillon;
-use sapphillon_core::proto::sapphillon::v1::{PluginFunction, PluginPackage, Permission, PermissionType, PermissionLevel};
-use sapphillon_core::permission::{check_permission, CheckPermissionResult, PluginFunctionPermissions};
+use sapphillon_core::proto::sapphillon::v1::{
+    Permission, PermissionLevel, PermissionType, PluginFunction, PluginPackage,
+};
 use sapphillon_core::runtime::OpStateWorkflowData;
-
 
 pub fn fetch_plugin_function() -> PluginFunction {
     PluginFunction {
         function_id: "app.sapphillon.core.fetch.fetch".to_string(),
         function_name: "Fetch".to_string(),
-        description: "Fetches the content of a URL using reqwest and returns it as a string.".to_string(),
+        description: "Fetches the content of a URL using reqwest and returns it as a string."
+            .to_string(),
         permissions: fetch_plugin_permissions(),
         arguments: "String: url".to_string(),
         returns: "String: content".to_string(),
@@ -48,7 +51,7 @@ pub fn fetch_plugin_package() -> PluginPackage {
         internal_plugin: Some(true),
         installed_at: None,
         updated_at: None,
-        verified: Some(true)
+        verified: Some(true),
     }
 }
 
@@ -80,31 +83,43 @@ fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> 
     // Allowed Permission in this func
     let allowed_permissions = {
         let data = state.borrow::<OpStateWorkflowData>();
-        let permissions = data.get_allowed_permissions().clone().unwrap_or_else(|| vec![PluginFunctionPermissions {
-            plugin_function_id: fetch_plugin_function().function_id,
-            permissions: sapphillon_core::permission::Permissions { permissions: vec![] },
-        }]);
-        
-        permissions.into_iter().find(|p| p.plugin_function_id == fetch_plugin_function().function_id)
+        let permissions = data.get_allowed_permissions().clone().unwrap_or_else(|| {
+            vec![PluginFunctionPermissions {
+                plugin_function_id: fetch_plugin_function().function_id,
+                permissions: sapphillon_core::permission::Permissions {
+                    permissions: vec![],
+                },
+            }]
+        });
+
+        permissions
+            .into_iter()
+            .find(|p| p.plugin_function_id == fetch_plugin_function().function_id)
             .map(|p| p.permissions)
-            .unwrap_or_else(|| sapphillon_core::permission::Permissions { permissions: vec![] })
-        
+            .unwrap_or_else(|| sapphillon_core::permission::Permissions {
+                permissions: vec![],
+            })
     };
-    
+
     let permission_check_result = check_permission(&required_permissions, &allowed_permissions);
 
     if let CheckPermissionResult::MissingPermission(perm) = permission_check_result {
-        return Err(JsErrorBox::new("PermissionDenied. Missing Permissions:", perm.to_string()));
+        return Err(JsErrorBox::new(
+            "PermissionDenied. Missing Permissions:",
+            perm.to_string(),
+        ));
     }
     Ok(())
 }
 
 #[op2]
 #[string]
-fn op2_fetch(state: &mut OpState, #[string] url: String) -> std::result::Result<String, JsErrorBox> {
+fn op2_fetch(
+    state: &mut OpState,
+    #[string] url: String,
+) -> std::result::Result<String, JsErrorBox> {
     // Permission Check
     permission_check(state, url.clone())?;
-    
 
     match fetch(&url) {
         Ok(body) => Ok(body),
@@ -118,15 +133,13 @@ fn fetch(url: &str) -> anyhow::Result<String> {
 }
 
 fn fetch_plugin_permissions() -> Vec<Permission> {
-    vec![
-        Permission {
-            display_name: "Network Access".to_string(),
-            description: "Allows the plugin to make network requests.".to_string(),
-            permission_type: PermissionType::NetAccess as i32,
-            permission_level: PermissionLevel::Unspecified as i32,
-            resource: vec![]
-        },
-    ]
+    vec![Permission {
+        display_name: "Network Access".to_string(),
+        description: "Allows the plugin to make network requests.".to_string(),
+        permission_type: PermissionType::NetAccess as i32,
+        permission_level: PermissionLevel::Unspecified as i32,
+        resource: vec![],
+    }]
 }
 
 #[cfg(test)]
