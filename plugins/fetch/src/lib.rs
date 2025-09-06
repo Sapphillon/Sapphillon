@@ -19,6 +19,35 @@
 use deno_core::op2;
 use deno_error::JsErrorBox;
 use sapphillon_core::plugin::{CorePluginFunction, CorePluginPackage};
+use sapphillon_core::proto::sapphillon::v1::{PluginFunction, PluginPackage, Permission, PermissionType, PermissionLevel};
+
+
+pub fn fetch_plugin_function() -> PluginFunction {
+    PluginFunction {
+        function_id: "app.sapphillon.core.fetch.fetch".to_string(),
+        function_name: "Fetch".to_string(),
+        description: "Fetches the content of a URL using reqwest and returns it as a string.".to_string(),
+        permissions: fetch_plugin_permissions(),
+        arguments: "String: url".to_string(),
+        returns: "String: content".to_string(),
+    }
+}
+
+pub fn fetch_plugin_package() -> PluginPackage {
+    PluginPackage {
+        package_id: "app.sapphillon.core.fetch".to_string(),
+        package_name: "Fetch".to_string(),
+        description: "A plugin to fetch the content of a URL.".to_string(),
+        functions: vec![fetch_plugin_function()],
+        package_version: env!("CARGO_PKG_VERSION").to_string(),
+        deprecated: None,
+        plugin_store_url: "BUILTIN".to_string(),
+        internal_plugin: Some(true),
+        installed_at: None,
+        updated_at: None,
+        verified: Some(true)
+    }
+}
 
 pub fn core_fetch_plugin() -> CorePluginFunction {
     CorePluginFunction::new(
@@ -50,6 +79,18 @@ fn op2_fetch(#[string] url: String) -> std::result::Result<String, JsErrorBox> {
 fn fetch(url: &str) -> anyhow::Result<String> {
     let body = ureq::get(url).call()?.body_mut().read_to_string()?;
     Ok(body)
+}
+
+fn fetch_plugin_permissions() -> Vec<Permission> {
+    vec![
+        Permission {
+            display_name: "Network Access".to_string(),
+            description: "Allows the plugin to make network requests.".to_string(),
+            permission_type: PermissionType::NetAccess as i32,
+            permission_level: PermissionLevel::Unspecified as i32,
+            resource: vec![]
+        },
+    ]
 }
 
 #[cfg(test)]
