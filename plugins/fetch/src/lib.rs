@@ -20,7 +20,7 @@ use deno_core::op2;
 use deno_error::JsErrorBox;
 use sapphillon_core::plugin::{CorePluginFunction, CorePluginPackage};
 
-pub fn fetch_plugin() -> CorePluginFunction {
+pub fn core_fetch_plugin() -> CorePluginFunction {
     CorePluginFunction::new(
         "app.sapphillon.core.fetch.fetch".to_string(),
         "Fetch".to_string(),
@@ -30,11 +30,11 @@ pub fn fetch_plugin() -> CorePluginFunction {
     )
 }
 
-pub fn fetch_plugin_package() -> CorePluginPackage {
+pub fn core_fetch_plugin_package() -> CorePluginPackage {
     CorePluginPackage::new(
         "app.sapphillon.core.fetch".to_string(),
         "Fetch".to_string(),
-        vec![fetch_plugin()],
+        vec![core_fetch_plugin()],
     )
 }
 
@@ -78,7 +78,7 @@ mod tests {
         let mut workflow = CoreWorkflowCode::new(
             "test".to_string(),
             code.to_string(),
-            vec![fetch_plugin_package()],
+            vec![core_fetch_plugin_package()],
             1,
             None,
             None,
