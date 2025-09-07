@@ -73,11 +73,14 @@ pub fn core_fetch_plugin_package() -> CorePluginPackage {
         vec![core_fetch_plugin()],
     )
 }
-fn _permission_check_backend(allow: Vec<PluginFunctionPermissions>, url: String) -> Result<(), JsErrorBox> {
+fn _permission_check_backend(
+    allow: Vec<PluginFunctionPermissions>,
+    url: String,
+) -> Result<(), JsErrorBox> {
     let mut perm = fetch_plugin_permissions();
     perm[0].resource = vec![url.clone()];
     let required_permissions = sapphillon_core::permission::Permissions { permissions: perm };
-    
+
     let allowed_permissions = {
         // Try to borrow workflow data from OpState; if it's not present (e.g. tests),
         // treat as empty allowed permissions rather than panicking.
@@ -92,31 +95,30 @@ fn _permission_check_backend(allow: Vec<PluginFunctionPermissions>, url: String)
             })
     };
 
-
-
     let permission_check_result = check_permission(&allowed_permissions, &required_permissions);
 
     match permission_check_result {
         CheckPermissionResult::Ok => Ok(()),
-        CheckPermissionResult::MissingPermission(perm) => {
-            Err(JsErrorBox::new(
-                "PermissionDenied. Missing Permissions:",
-                perm.to_string(),
-            ))
-        }
+        CheckPermissionResult::MissingPermission(perm) => Err(JsErrorBox::new(
+            "PermissionDenied. Missing Permissions:",
+            perm.to_string(),
+        )),
     }
 }
 
 fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> {
-    let data = state.borrow::<Arc<Mutex<OpStateWorkflowData>>>().lock().unwrap();
+    let data = state
+        .borrow::<Arc<Mutex<OpStateWorkflowData>>>()
+        .lock()
+        .unwrap();
     let allowed = match &data.get_allowed_permissions() {
         Some(p) => p,
-        None => {
-            &vec![PluginFunctionPermissions {
-                plugin_function_id: fetch_plugin_function().function_id,
-                permissions: sapphillon_core::permission::Permissions { permissions: fetch_plugin_permissions() },
-            }]
-        }
+        None => &vec![PluginFunctionPermissions {
+            plugin_function_id: fetch_plugin_function().function_id,
+            permissions: sapphillon_core::permission::Permissions {
+                permissions: fetch_plugin_permissions(),
+            },
+        }],
     };
     _permission_check_backend(allowed.clone(), url)?;
     Ok(())
@@ -155,8 +157,8 @@ fn fetch_plugin_permissions() -> Vec<Permission> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sapphillon_core::workflow::CoreWorkflowCode;
     use sapphillon_core::proto::sapphillon::v1::PermissionType;
+    use sapphillon_core::workflow::CoreWorkflowCode;
 
     #[test]
     fn test_fetch() {
@@ -197,12 +199,11 @@ mod tests {
             vec![core_fetch_plugin_package()],
             1,
             None,
-            Some(perm)
+            Some(perm),
         );
 
         workflow.run();
         assert_eq!(workflow.result.len(), 1);
-
 
         let actual = &workflow.result[0].result;
         // Accept either a successful fetch result or a permission-denied message depending on test environment.
@@ -240,20 +241,17 @@ mod tests {
             vec![core_fetch_plugin_package()],
             1,
             Some(perm.clone()),
-            Some(perm)
+            Some(perm),
         );
 
         workflow.run();
         assert_eq!(workflow.result.len(), 1);
 
         let expected = fetch(&url).unwrap() + "\n";
-        
+
         let actual = &workflow.result[0].result;
         // Accept either a successful fetch result or a permission-denied message depending on test environment.
-        assert!(
-            actual == &expected,
-            "Unexpected workflow result: {actual}"
-        );
+        assert!(actual == &expected, "Unexpected workflow result: {actual}");
     }
 
     #[test]
@@ -315,9 +313,10 @@ mod tests {
             Err(e) => {
                 let msg = e.to_string();
                 assert!(
-                    msg.contains("Permissions") || msg.contains("PermissionDenied") || msg.to_lowercase().contains("permission denied"),
-                    "Unexpected error message: {}",
-                    msg
+                    msg.contains("Permissions")
+                        || msg.contains("PermissionDenied")
+                        || msg.to_lowercase().contains("permission denied"),
+                    "Unexpected error message: {msg}"
                 );
             }
         }
@@ -339,13 +338,17 @@ mod tests {
             },
         };
         let res = _permission_check_backend(vec![perm], url.clone());
-        assert!(res.is_err(), "Expected permission check to fail for unmatched resource");
+        assert!(
+            res.is_err(),
+            "Expected permission check to fail for unmatched resource"
+        );
         let err = res.err().unwrap();
         let msg = err.to_string();
         assert!(
-            msg.contains("PermissionDenied") || msg.to_lowercase().contains("permission denied") || msg.contains("Permissions"),
-            "Unexpected error message: {}",
-            msg
+            msg.contains("PermissionDenied")
+                || msg.to_lowercase().contains("permission denied")
+                || msg.contains("Permissions"),
+            "Unexpected error message: {msg}"
         );
     }
 }
