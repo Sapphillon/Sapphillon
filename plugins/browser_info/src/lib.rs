@@ -17,23 +17,24 @@ use sapphillon_core::plugin::{CorePluginFunction, CorePluginPackage};
 
 // `grpc` クレートから、自動生成されたgRPCの型をインポートします。
 use floorp_grpc::browser_info::{
-    browser_info_service_client::BrowserInfoServiceClient,
+    browser_info_service_client::BrowserInfoServiceClient as BrowserInfoClient,
     GetAllContextDataRequest, GetContextDataParams,
 };
 use std::sync::{OnceLock, Mutex};
 use deno_error::JsErrorBox;
+use std::env;
 
 // gRPCサーバーのアドレス。将来的には設定ファイルから読み込むのが望ましいです。
 const GRPC_SERVER_ADDRESS: &str = "http://[::1]:50051";
 
-static BROWSER_INFO_CLIENT: OnceLock<Mutex<BrowserInfoServiceClient<tonic::transport::Channel>>> = OnceLock::new();
+static BROWSER_INFO_CLIENT: OnceLock<Mutex<BrowserInfoClient<tonic::transport::Channel>>> = OnceLock::new();
 
-fn get_or_init_client() -> Option<std::sync::MutexGuard<'static, BrowserInfoServiceClient<tonic::transport::Channel>>> {
+fn get_or_init_client() -> Option<std::sync::MutexGuard<'static, BrowserInfoClient<tonic::transport::Channel>>> {
     let lock = BROWSER_INFO_CLIENT.get_or_init(|| {
         // Endpoint を lazy に Channel 化（tonic 0.11 では connect_lazy Enable）
         let ch = tonic::transport::Endpoint::from_static("http://127.0.0.1:9") // 未使用ポート
             .connect_lazy();
-        Mutex::new(BrowserInfoServiceClient::new(ch))
+        Mutex::new(BrowserInfoClient::new(ch))
     });
     lock.lock().ok()
 }
@@ -54,7 +55,7 @@ pub fn get_all_context_data_plugin() -> CorePluginFunction {
     CorePluginFunction::new(
         // Deno Opの一意なID
         "app.floorp.browser_info.get_all_context_data".to_string(),
-        "GetAllContextData".to_string(), // 関数名
+        "getAllContextData".to_string(), // 関数名
         "Gets all browser context data.".to_string(), // 関数の説明
         // この関数に紐付けるRustのOp関数を指定
     op2_get_all_context_data(),
@@ -80,8 +81,32 @@ struct InputParams {
 #[op2(async)]
 #[string]
 pub async fn op2_get_all_context_data(#[serde] params: Option<InputParams>) -> Result<String, JsErrorBox> {
+    // 環境変数でダミーモードを有効化: BROWSER_INFO_DUMMY=1
+    if env::var("BROWSER_INFO_DUMMY").ok().as_deref() == Some("1") {
+        // フロント接続確認用のスタブ JSON
+        let dummy = serde_json::json!({
+            "history": [
+                {"title": "Example Site", "url": "https://example.com", "lastVisited": "2025-09-07T12:00:00Z"},
+                {"title": "Rust Lang", "url": "https://www.rust-lang.org/", "lastVisited": "2025-09-07T12:05:00Z"}
+            ],
+            "downloads": [
+                {"fileName": "report.pdf", "sizeBytes": 1048576, "status": "completed"}
+            ],
+            "tabs": [
+                {"id": "tab-1", "title": "Start Page", "url": "about:home", "active": true},
+                {"id": "tab-2", "title": "Docs", "url": "https://docs.example.com", "active": false}
+            ],
+            "meta": {
+                "dummy": true,
+                "generatedAt": "2025-09-07T12:10:00Z",
+                "historyLimit": params.as_ref().and_then(|p| p.history_limit),
+                "downloadLimit": params.as_ref().and_then(|p| p.download_limit)
+            }
+        });
+        return Ok(dummy.to_string());
+    }
     let mut guard = get_or_init_client().ok_or_else(|| JsErrorBox::new("Error", "Mutex poisoned"))?;
-    if let Err(e) = BrowserInfoServiceClient::connect(GRPC_SERVER_ADDRESS).await.map(|c| { *guard = c; }) {
+    if let Err(e) = BrowserInfoClient::connect(GRPC_SERVER_ADDRESS).await.map(|c| { *guard = c; }) {
         return Err(JsErrorBox::new("Error", format!("gRPC connection failed: {e}")));
     }
     let request = GetAllContextDataRequest {

@@ -20,26 +20,79 @@ use std::env;
 use std::error::Error;
 
 use async_openai::{
-    Client,
-    config::OpenAIConfig,
-    types::{ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs},
+        Client,
+        config::OpenAIConfig,
+        types::{ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs},
 };
 
+// 固定の Browser Info ワークフロー例 (一時措置)
+const SAMPLE_BROWSER_INFO_WORKFLOW: &str = r#"function workflow() {
+    /**
+     * Browser Info プラグインを利用してブラウザのコンテキストデータを取得し
+     * サマリをコンソールに出力して返すシンプルな例。
+     * - 使用プラグイン: BrowserInfo (getAllContextData)
+     * - 返却: 取得した JSON を parse したオブジェクト
+     */
+    return (async () => {
+        try {
+                    // グローバル名前空間が未初期化の場合（プラグインJS未ロード時）に最低限のラッパーを自前定義
+                    if (!globalThis.Sapphillon) globalThis.Sapphillon = {};
+                    if (!globalThis.Sapphillon.BrowserInfo) {
+                        // Deno core ops へ直接フォールバック
+                        const ops = (Deno.core && Deno.core.ops) || {};
+                        if (!ops.op2_get_all_context_data) {
+                            throw new Error('BrowserInfo op (op2_get_all_context_data) is未登録: プラグイン初期化前です');
+                        }
+                        globalThis.Sapphillon.BrowserInfo = {
+                            getAllContextData: (params) => ops.op2_get_all_context_data(params || null)
+                        };
+                    }
+
+                    // 必要に応じて取得件数を調整
+            const raw = await Sapphillon.BrowserInfo.getAllContextData({ historyLimit: 20, downloadLimit: 10 });
+            const data = JSON.parse(raw || '{}');
+
+            // サマリ情報を整形
+            const summary = {
+                historyCount: Array.isArray(data.history) ? data.history.length : 0,
+                downloadCount: Array.isArray(data.downloads) ? data.downloads.length : 0,
+                tabCount: Array.isArray(data.tabs) ? data.tabs.length : 0,
+                timestamp: new Date().toISOString()
+            };
+
+            console.log('[Workflow] Browser context summary:', summary);
+            console.log('[Workflow] Raw context sample keys:', Object.keys(data));
+
+            // 利用側がそのまま詳細データを扱えるよう返却
+            return { summary, data };
+            } catch (e) {
+                // 可能な限り詳細を抽出
+                const errInfo = {
+                    toString: (() => { try { return String(e); } catch { return 'n/a'; } })(),
+                    message: e && e.message || null,
+                    stack: e && e.stack || null,
+                    name: e && e.name || null,
+                    keys: (() => { try { return Object.keys(e || {}); } catch { return []; } })(),
+                    json: (() => { try { return JSON.stringify(e); } catch { return '<<unserializable>>'; } })(),
+                    type: typeof e,
+                };
+                console.error('[Workflow] Failed to collect browser info', errInfo);
+                throw (e instanceof Error ? e : new Error(errInfo.message || errInfo.toString));
+        }
+    })();
+}"#;
+
 #[allow(dead_code)]
-pub fn generate_workflow(user_query: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let prompt = generate_prompt(user_query)?;
-    let workflow_raw = llm_call(&prompt)?;
-    let workflow_code = extract_first_code(&workflow_raw);
-    workflow_code.ok_or_else(|| "No code section found in the response".into())
+pub fn generate_workflow(_user_query: &str) -> Result<String, Box<dyn std::error::Error>> {
+    // LLM 呼び出しをバイパスし、固定ワークフローコードを返す（一時対応）
+    Ok(SAMPLE_BROWSER_INFO_WORKFLOW.to_string())
 }
 
 pub async fn generate_workflow_async(
-    user_query: &str,
+    _user_query: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let prompt = generate_prompt(user_query)?;
-    let workflow_raw = _llm_call_async(&prompt).await?;
-    let workflow_code = extract_first_code(&workflow_raw);
-    workflow_code.ok_or_else(|| "No code section found in the response".into())
+    // 非同期版も同様に固定コードを返す
+    Ok(SAMPLE_BROWSER_INFO_WORKFLOW.to_string())
 }
 
 #[allow(dead_code)]
