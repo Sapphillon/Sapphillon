@@ -105,7 +105,7 @@ fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> 
             })
     };
 
-    let permission_check_result = check_permission(&required_permissions, &allowed_permissions);
+    let permission_check_result = check_permission(&allowed_permissions, &required_permissions);
 
     if let CheckPermissionResult::MissingPermission(perm) = permission_check_result {
         return Err(JsErrorBox::new(
@@ -173,37 +173,27 @@ mod tests {
         // Provide allowed permissions so permission_check inside the plugin passes.
         let url = "https://dummyjson.com/test".to_string();
 
-        // Construct proto AllowedPermission so WorkflowCode.allowed_permissions has the expected type.
-        let proto_allowed = sapphillon_core::proto::sapphillon::v1::AllowedPermission {
+        let perm: PluginFunctionPermissions = PluginFunctionPermissions {
             plugin_function_id: fetch_plugin_function().function_id,
-            permissions: vec![Permission {
-                display_name: "Network Access".to_string(),
-                description: "Allows the plugin to make network requests.".to_string(),
-                permission_type: PermissionType::NetAccess as i32,
-                permission_level: PermissionLevel::Unspecified as i32,
-                resource: vec![url.clone()],
-            }],
+            permissions: sapphillon_core::permission::Permissions {
+                permissions: vec![Permission {
+                    display_name: "Network Access".to_string(),
+                    description: "Allows the plugin to make network requests.".to_string(),
+                    permission_type: PermissionType::NetAccess as i32,
+                    permission_level: PermissionLevel::Unspecified as i32,
+                    resource: vec!["dummyjson.com/test".to_string()],
+                }],
+            },
         };
-
-        // Build a WorkflowCode proto and set allowed_permissions so the runtime receives them.
-        let workflow_code = sapphillon_core::proto::sapphillon::v1::WorkflowCode {
-            id: "test".to_string(),
-            code_revision: 1,
-            code: code.to_string(),
-            language: 0,
-            created_at: None,
-            result: vec![],
-            plugin_packages: vec![],
-            plugin_function_ids: vec![],
-            allowed_permissions: vec![proto_allowed],
-        };
-
-        let mut workflow = CoreWorkflowCode::new_from_proto(
-            &workflow_code,
+        let mut workflow = CoreWorkflowCode::new(
+            "test".to_string(),
+            code.to_string(),
             vec![core_fetch_plugin_package()],
-            None,
-            None,
+            1,
+            Some(perm.clone()),
+            Some(perm)
         );
+
         workflow.run();
         assert_eq!(workflow.result.len(), 1);
 
