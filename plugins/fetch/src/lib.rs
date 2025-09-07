@@ -26,6 +26,7 @@ use sapphillon_core::proto::sapphillon::v1::{
     Permission, PermissionLevel, PermissionType, PluginFunction, PluginPackage,
 };
 use sapphillon_core::runtime::OpStateWorkflowData;
+use std::sync::{Arc, Mutex};
 
 pub fn fetch_plugin_function() -> PluginFunction {
     PluginFunction {
@@ -74,7 +75,6 @@ pub fn core_fetch_plugin_package() -> CorePluginPackage {
 }
 fn _permission_check_backend(allow: Vec<PluginFunctionPermissions>, url: String) -> Result<(), JsErrorBox> {
     let mut perm = fetch_plugin_permissions();
-    let url = url.replace("http://", "").replace("https://", "");
     perm[0].resource = vec![url.clone()];
     let required_permissions = sapphillon_core::permission::Permissions { permissions: perm };
     
@@ -96,17 +96,19 @@ fn _permission_check_backend(allow: Vec<PluginFunctionPermissions>, url: String)
 
     let permission_check_result = check_permission(&allowed_permissions, &required_permissions);
 
-    if let CheckPermissionResult::MissingPermission(perm) = permission_check_result {
-        return Err(JsErrorBox::new(
-            "PermissionDenied. Missing Permissions:",
-            perm.to_string(),
-        ));
+    match permission_check_result {
+        CheckPermissionResult::Ok => Ok(()),
+        CheckPermissionResult::MissingPermission(perm) => {
+            Err(JsErrorBox::new(
+                "PermissionDenied. Missing Permissions:",
+                perm.to_string(),
+            ))
+        }
     }
-    Ok(())
 }
 
 fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> {
-    let data = state.borrow_mut::<OpStateWorkflowData>();
+    let data = state.borrow::<Arc<Mutex<OpStateWorkflowData>>>().lock().unwrap();
     let allowed = match &data.get_allowed_permissions() {
         Some(p) => p,
         None => {
@@ -228,7 +230,7 @@ mod tests {
                     description: "Allows the plugin to make network requests.".to_string(),
                     permission_type: PermissionType::NetAccess as i32,
                     permission_level: PermissionLevel::Unspecified as i32,
-                    resource: vec!["dummyjson.com/test".to_string()],
+                    resource: vec!["https://dummyjson.com/test".to_string()],
                 }],
             },
         };
@@ -249,7 +251,7 @@ mod tests {
         let actual = &workflow.result[0].result;
         // Accept either a successful fetch result or a permission-denied message depending on test environment.
         assert!(
-            actual == &expected || actual.to_lowercase().contains("permission denied"),
+            actual == &expected,
             "Unexpected workflow result: {actual}"
         );
     }
@@ -303,7 +305,7 @@ mod tests {
                     description: "Allows the plugin to make network requests.".to_string(),
                     permission_type: PermissionType::NetAccess as i32,
                     permission_level: PermissionLevel::Unspecified as i32,
-                    resource: vec!["dummyjson.com/test".to_string()],
+                    resource: vec!["https://dummyjson.com/test".to_string()],
                 }],
             },
         };
