@@ -72,30 +72,16 @@ pub fn core_fetch_plugin_package() -> CorePluginPackage {
         vec![core_fetch_plugin()],
     )
 }
-
-fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> {
-    // Requrements Permission of this func
+fn _permission_check_backend(allow: Vec<PluginFunctionPermissions>, url: String) -> Result<(), JsErrorBox> {
     let mut perm = fetch_plugin_permissions();
     let url = url.replace("http://", "").replace("https://", "");
     perm[0].resource = vec![url.clone()];
-
     let required_permissions = sapphillon_core::permission::Permissions { permissions: perm };
-
-    // Allowed Permission in this func
+    
     let allowed_permissions = {
         // Try to borrow workflow data from OpState; if it's not present (e.g. tests),
         // treat as empty allowed permissions rather than panicking.
-        let data_opt = state.try_borrow::<OpStateWorkflowData>();
-        let permissions_vec = data_opt
-            .and_then(|d| d.get_allowed_permissions().clone())
-            .unwrap_or_else(|| {
-                vec![PluginFunctionPermissions {
-                    plugin_function_id: fetch_plugin_function().function_id,
-                    permissions: sapphillon_core::permission::Permissions {
-                        permissions: vec![],
-                    },
-                }]
-            });
+        let permissions_vec = allow;
 
         permissions_vec
             .into_iter()
@@ -106,6 +92,8 @@ fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> 
             })
     };
 
+
+
     let permission_check_result = check_permission(&allowed_permissions, &required_permissions);
 
     if let CheckPermissionResult::MissingPermission(perm) = permission_check_result {
@@ -114,6 +102,21 @@ fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> 
             perm.to_string(),
         ));
     }
+    Ok(())
+}
+
+fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> {
+    let data = state.borrow_mut::<OpStateWorkflowData>();
+    let allowed = match &data.get_allowed_permissions() {
+        Some(p) => p,
+        None => {
+            &vec![PluginFunctionPermissions {
+                plugin_function_id: fetch_plugin_function().function_id,
+                permissions: sapphillon_core::permission::Permissions { permissions: fetch_plugin_permissions() },
+            }]
+        }
+    };
+    _permission_check_backend(allowed.clone(), url)?;
     Ok(())
 }
 
