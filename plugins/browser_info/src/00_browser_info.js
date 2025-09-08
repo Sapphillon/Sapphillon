@@ -20,16 +20,15 @@ if (!globalThis.Sapphillon) {
 globalThis.Sapphillon.BrowserInfo = {
   /**
    * ブラウザのコンテキストデータ（履歴、タブ、ダウンロード情報）を取得します。
-   * この関数は非同期で動作し、Promiseを返します。
-   * @param {object} [params] - 取得するデータ量を制限するパラメータ。
-   * @param {number} [params.historyLimit] - 取得する履歴の最大件数。
-   * @param {number} [params.downloadLimit] - 取得するダウンロード情報の最大件数。
-   * @returns {Promise<string>} ブラウザのコンテキストデータを含むJSON文字列のPromise。
+   * 非同期の Deno op を呼び出します（Promise を返す）。
+   * @param {object} [params]
+   * @returns {Promise<string>}
    */
   getAllContextData: function (params) {
-    // DenoのネイティブOp（Rustで実装された関数）を呼び出します。
-    // 引数で渡されたparamsオブジェクトは、自動的にシリアライズされてRust側に渡されます。
-    // パラメータがない場合はnullを渡します。
-    return Deno.core.ops.op2_get_all_context_data(params || null);
+    const ops = (Deno.core && Deno.core.ops) || {};
+    if (!ops.op2_get_all_context_data) {
+      throw new Error("BrowserInfo op (op2_get_all_context_data) is未登録: プラグイン初期化前です");
+    }
+    return ops.op2_get_all_context_data(params || null);
   },
 };

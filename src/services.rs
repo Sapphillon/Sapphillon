@@ -20,5 +20,9 @@
 
 mod version;
 mod workflow;
+mod browser_bridge;
+mod browser_info;
 pub use version::*;
 pub use workflow::*;
+pub use browser_bridge::*;
+pub use browser_info::*;

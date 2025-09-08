@@ -24,8 +24,9 @@ use std::sync::{OnceLock, Mutex};
 use deno_error::JsErrorBox;
 use std::env;
 
-// gRPCサーバーのアドレス。将来的には設定ファイルから読み込むのが望ましいです。
-const GRPC_SERVER_ADDRESS: &str = "http://[::1]:50051";
+// gRPCサーバーのアドレス。環境変数 `BROWSER_INFO_SERVER_ADDRESS` または `GRPC_SERVER_ADDRESS` で上書き可能。
+// 既定は IPv4 ループバックを使用。
+const DEFAULT_GRPC_SERVER_ADDRESS: &str = "http://127.0.0.1:50051";
 
 static BROWSER_INFO_CLIENT: OnceLock<Mutex<BrowserInfoClient<tonic::transport::Channel>>> = OnceLock::new();
 
@@ -45,21 +46,19 @@ pub fn browser_info_plugin_package() -> CorePluginPackage {
     CorePluginPackage::new(
         "app.floorp.browser_info".to_string(), // パッケージの一意なID
         "Floorp Browser Info".to_string(),     // プラグイン名
-        // このパッケージに含まれるプラグイン関数（Deno Op）のリスト
-        vec![get_all_context_data_plugin()],
+        // 非同期版のみを登録（Deno でのランタイム二重起動を避ける）
+        vec![get_all_context_data_plugin_async()],
     )
 }
 
 /// 個々のプラグイン関数（Deno Op）を定義します。
-pub fn get_all_context_data_plugin() -> CorePluginFunction {
+pub fn get_all_context_data_plugin_async() -> CorePluginFunction {
     CorePluginFunction::new(
-        // Deno Opの一意なID
+        // Deno Opの一意なID（非同期）
         "app.floorp.browser_info.get_all_context_data".to_string(),
-        "getAllContextData".to_string(), // 関数名
-        "Gets all browser context data.".to_string(), // 関数の説明
-        // この関数に紐付けるRustのOp関数を指定
-    op2_get_all_context_data(),
-        // ワークフロー実行時に初期化するJavaScriptコードを読み込む
+        "getAllContextData".to_string(),
+        "Gets all browser context data (async).".to_string(),
+        op2_get_all_context_data(),
         Some(include_str!("00_browser_info.js").to_string()),
     )
 }
@@ -69,7 +68,7 @@ pub fn get_all_context_data_plugin() -> CorePluginFunction {
 /// `#[op2(async)]` をつけると、Deno側では自動的にPromiseとして扱われます。
 // JavaScript から受け取る入力用（snake_case <-> camelCase を意識してフィールド名は JS 側に合わせる）
 // JS 側: { historyLimit: number, downloadLimit: number }
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct InputParams {
     #[serde(default)]
@@ -106,7 +105,11 @@ pub async fn op2_get_all_context_data(#[serde] params: Option<InputParams>) -> R
         return Ok(dummy.to_string());
     }
     let mut guard = get_or_init_client().ok_or_else(|| JsErrorBox::new("Error", "Mutex poisoned"))?;
-    if let Err(e) = BrowserInfoClient::connect(GRPC_SERVER_ADDRESS).await.map(|c| { *guard = c; }) {
+    let addr = env::var("BROWSER_INFO_SERVER_ADDRESS")
+        .ok()
+        .or_else(|| env::var("GRPC_SERVER_ADDRESS").ok())
+        .unwrap_or_else(|| DEFAULT_GRPC_SERVER_ADDRESS.to_string());
+    if let Err(e) = BrowserInfoClient::connect(addr).await.map(|c| { *guard = c; }) {
         return Err(JsErrorBox::new("Error", format!("gRPC connection failed: {e}")));
     }
     let request = GetAllContextDataRequest {
@@ -121,3 +124,5 @@ pub async fn op2_get_all_context_data(#[serde] params: Option<InputParams>) -> R
         Err(JsErrorBox::new("Error", response.error_message.unwrap_or_else(|| "Unknown error from server".to_string())))
     }
 }
+
+// 同期版はランタイムの制約（block_on不可）により提供しない

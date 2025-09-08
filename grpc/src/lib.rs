@@ -4,6 +4,10 @@ pub mod browser_info {
     // 生成ファイル: sapphillon.v1.floorp_browser_info.rs
     tonic::include_proto!("sapphillon.v1.floorp_browser_info");
 }
+pub mod browser_bridge {
+    // 生成ファイル: sapphillon.v1.browser_bridge.rs
+    tonic::include_proto!("sapphillon.v1.browser_bridge");
+}
 pub mod webscraper {
     // 生成ファイル: sapphillon.v1.floorp_webscraper.rs
     tonic::include_proto!("sapphillon.v1.floorp_webscraper");

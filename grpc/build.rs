@@ -4,6 +4,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build_client(true)
         .compile_protos(
             &[
+                "../proto/browser_bridge.proto",
                 "../proto/browser_info.proto",
                 "../proto/webscraper.proto",
                 "../proto/tab_manager.proto",

@@ -16,6 +16,7 @@ dependencies = [
  "floorp-plugin-browser-info",
  "floorp-plugin-tab-manager",
  "floorp-plugin-webscraper",
+ "futures-util",
  "log",
  "prost",
  "prost-types",

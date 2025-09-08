@@ -19,6 +19,7 @@
 // gRPC server startup logic
 
 use crate::services::{MyVersionService, MyWorkflowService};
+use crate::services::{BrowserBridgeServiceImpl, MyBrowserInfoService};
 use log::info;
 use sapphillon_core::proto::sapphillon::v1::version_service_server::VersionServiceServer;
 use sapphillon_core::proto::sapphillon::v1::workflow_service_server::WorkflowServiceServer;
@@ -29,6 +30,7 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
     let version_service = MyVersionService {};
     let workflow_service = MyWorkflowService {};
+    // Bridge + BrowserInfo services are constructed inline below
 
     let reflection_service_v1 = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(
@@ -128,6 +130,12 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(tonic_web::enable(WorkflowServiceServer::new(
             workflow_service,
         )))
+        .add_service(tonic_web::enable(
+            crate::services::BrowserBridgeServiceImpl::new().into_server(),
+        ))
+        .add_service(tonic_web::enable(
+            crate::services::MyBrowserInfoService::new(std::time::Duration::from_secs(10)).into_server(),
+        ))
         .serve(addr)
         .await?;
 
