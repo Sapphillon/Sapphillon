@@ -57,6 +57,7 @@ impl BridgeHub {
         }
     }
 
+    #[allow(dead_code)]
     async fn clear_sender(&self) {
         let mut guard = self.sender.lock().await;
         *guard = None;
@@ -103,22 +104,14 @@ impl BridgeHub {
         // 1) If streaming sender exists, send immediately.
         // 2) Else if a long-poll waiter exists, deliver to the waiter.
         // 3) Else queue until a subscriber/waiter appears (within overall timeout).
-        let mut delivered = false;
-        if let Some(mut s) = self.sender.lock().await.clone() {
-            delivered = s.send(req.clone()).await.is_ok();
-        }
-        if !delivered {
-            let mut waiters = self.waiters.lock().await;
-            if let Some(w) = waiters.pop_front() {
-                let _ = w.send(req.clone());
-                delivered = true;
-            }
-        }
-        if !delivered {
+        if let Some(s) = self.sender.lock().await.clone() {
+            let _ = s.send(req.clone()).await;
+        } else if let Some(w) = { self.waiters.lock().await.pop_front() } {
+            let _ = w.send(req.clone());
+        } else {
             // Queue it for later pickup by a subscriber or waiter
             let mut q = self.queue.lock().await;
             q.push_back(req.clone());
-            delivered = true; // Consider enqueued as delivered; completion will still be awaited.
         }
 
         // Await completion with timeout
@@ -213,4 +206,4 @@ impl BrowserBridge for BrowserBridgeServiceImpl {
 }
 
 // Re-export for server wiring
-pub use pb::browser_bridge_server::BrowserBridgeServer as BrowserBridgeServerType;
+// Public re-export removed (unused)

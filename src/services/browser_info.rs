@@ -83,4 +83,4 @@ impl BrowserInfoService for MyBrowserInfoService {
 }
 
 // Re-export for server wiring
-pub use pb::browser_info_service_server::BrowserInfoServiceServer as BrowserInfoServiceServerType;
+// Public re-export removed (unused)

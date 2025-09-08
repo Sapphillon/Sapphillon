@@ -131,10 +131,10 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
             workflow_service,
         )))
         .add_service(tonic_web::enable(
-            crate::services::BrowserBridgeServiceImpl::new().into_server(),
+            BrowserBridgeServiceImpl::new().into_server(),
         ))
         .add_service(tonic_web::enable(
-            crate::services::MyBrowserInfoService::new(std::time::Duration::from_secs(10)).into_server(),
+            MyBrowserInfoService::new(std::time::Duration::from_secs(10)).into_server(),
         ))
         .serve(addr)
         .await?;

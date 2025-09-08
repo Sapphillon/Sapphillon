@@ -197,3 +197,36 @@ impl WorkflowService for MyWorkflowService {
         Ok(tonic::Response::new(res))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sapphillon_core::proto::sapphillon::v1::{WorkflowCode, Workflow};
+
+    #[tokio::test]
+    async fn test_run_workflow_simple_console() {
+        let svc = MyWorkflowService::default();
+
+        // Minimal workflow that prints a line
+        let code = r#"function workflow(){ console.log('OK'); return 'OK'; }workflow();"#;
+        let wf_code = WorkflowCode {
+            id: "wid".to_string(),
+            code_revision: 1,
+            code: code.to_string(),
+            ..Default::default()
+        };
+        let wf = Workflow {
+            id: "w".to_string(),
+            display_name: "t".to_string(),
+            description: "d".to_string(),
+            workflow_language: 0,
+            workflow_code: vec![wf_code],
+            ..Default::default()
+        };
+        let req = RunWorkflowRequest { workflow_definition: Some(wf) };
+        let resp = svc.run_workflow(tonic::Request::new(req)).await.unwrap().into_inner();
+        assert_eq!(resp.status.unwrap().code, 0);
+        let out = resp.workflow_result.unwrap().result;
+        assert!(out.contains("OK"));
+    }
+}
