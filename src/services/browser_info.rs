@@ -3,7 +3,7 @@
 
 use std::{sync::Arc, time::Duration};
 
-use floorp_grpc::browser_info as pb;
+use crate::services::browser_bridge::browser_info_pb as pb;
 use pb::browser_info_service_server::{BrowserInfoService, BrowserInfoServiceServer};
 use pb::{GetAllContextDataRequest, GetAllContextDataResponse};
 use serde_json::json;
@@ -81,6 +81,3 @@ impl BrowserInfoService for MyBrowserInfoService {
         }
     }
 }
-
-// Re-export for server wiring
-// Public re-export removed (unused)

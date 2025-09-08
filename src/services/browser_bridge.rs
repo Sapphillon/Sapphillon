@@ -16,6 +16,10 @@ use futures_util::StreamExt;
 use std::pin::Pin;
 use futures_util::stream::Stream;
 
+pub mod browser_info_pb {
+    pub use floorp_grpc::browser_info::*;
+}
+
 // Hub: holds the current UI subscriber and pending map
 #[derive(Default)]
 pub struct BridgeHub {
