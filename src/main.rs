@@ -35,6 +35,15 @@ async fn main() -> Result<()> {
     env_logger::Builder::from_default_env()
         .filter_level(args.loglevel.clone().into())
         .init();
+    
+
+    // orm log
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_thread_ids(true)
+        .with_thread_names(true)
+        .with_test_writer()
+        .init();
 
     match args.command {
         Command::Start => {
