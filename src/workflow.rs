@@ -27,52 +27,29 @@ use async_openai::{
 
 // 固定の Browser Info ワークフロー例 (一時措置)
 const SAMPLE_BROWSER_INFO_WORKFLOW: &str = r#"function workflow() {
-    /**
-     * Browser Info プラグインを利用してブラウザのコンテキストデータを取得し
-     * サマリをコンソールに出力して返すシンプルな例。
-     * - 使用プラグイン: BrowserInfo (getAllContextData)
-     * - 返却: JSON 文字列（UI表示で使用）
-     */
-    return (async () => {
-        try {
-            if (!globalThis.Sapphillon) globalThis.Sapphillon = {};
-            if (!globalThis.Sapphillon.BrowserInfo) {
-                const ops = (Deno.core && Deno.core.ops) || {};
-                if (!ops.op2_get_all_context_data) {
-                    throw new Error('BrowserInfo op (op2_get_all_context_data) is未登録: プラグイン初期化前です');
-                }
-                globalThis.Sapphillon.BrowserInfo = {
-                    getAllContextData: (params) => ops.op2_get_all_context_data(params || null)
-                };
-            }
-
-            const raw = await Sapphillon.BrowserInfo.getAllContextData({ historyLimit: 20, downloadLimit: 10 });
-            const data = JSON.parse(raw || '{}');
-            const summary = {
-                historyCount: Array.isArray(data.history) ? data.history.length : 0,
-                downloadCount: Array.isArray(data.downloads) ? data.downloads.length : 0,
-                tabCount: Array.isArray(data.tabs) ? data.tabs.length : 0,
-                timestamp: new Date().toISOString()
-            };
-            console.log('[Workflow] Browser context summary:', summary);
-            console.log('[Workflow] Raw context sample keys:', Object.keys(data));
-            const result = JSON.stringify({ summary, data });
-            console.log(result);
-            return result;
-        } catch (e) {
-            const errInfo = {
-                toString: (() => { try { return String(e); } catch { return 'n/a'; } })(),
-                message: e && e.message || null,
-                stack: e && e.stack || null,
-                name: e && e.name || null,
-                keys: (() => { try { return Object.keys(e || {}); } catch { return []; } })(),
-                json: (() => { try { return JSON.stringify(e); } catch { return '<<unserializable>>'; } })(),
-                type: typeof e,
-            };
-            console.error('[Workflow] Failed to collect browser info', errInfo);
-            throw (e instanceof Error ? e : new Error(errInfo.message || errInfo.toString));
-        }
-    })();
+  'use strict';
+  return (async () => {
+    try {
+      if (!globalThis.Sapphillon || !globalThis.Sapphillon.BrowserInfo) {
+        throw new Error('BrowserInfo plugin is not initialized');
+      }
+      const raw = await Sapphillon.BrowserInfo.getAllContextData({ historyLimit: 20, downloadLimit: 10 });
+      const data = JSON.parse(raw || '{}');
+      const summary = {
+        historyCount: Array.isArray(data.history) ? data.history.length : 0,
+        downloadCount: Array.isArray(data.downloads) ? data.downloads.length : 0,
+        tabCount: Array.isArray(data.tabs) ? data.tabs.length : 0,
+        timestamp: new Date().toISOString()
+      };
+      const result = JSON.stringify({ summary, data });
+      console.log(result);
+      return result;
+    } catch (e) {
+      const msg = (e && e.message) ? e.message : String(e);
+      console.log(JSON.stringify({ error: msg }));
+      return JSON.stringify({ error: msg });
+    }
+  })();
 }"#;
 
 #[allow(dead_code)]

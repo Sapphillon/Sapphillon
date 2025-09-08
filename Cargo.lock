@@ -6357,7 +6357,6 @@ dependencies = [
 [[package]]
 name = "sapphillon_core"
 version = "0.5.5"
-source = "git+https://github.com/Walkmana-25/Sapphillon-Core.git?tag=v0.5.5-alpha#b35185ce940f31093b9d271370cc2396025a5abd"
 dependencies = [
  "anyhow",
  "chrono",

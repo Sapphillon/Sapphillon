@@ -150,29 +150,42 @@ impl WorkflowService for MyWorkflowService {
 
         log::debug!("Parsed workflow code: {}", workflow_code.code);
 
-        let mut workflow_core = CoreWorkflowCode::new_from_proto(
-            workflow_code,
-            vec![
-                fetch_plugin_package(),
-                browser_info_plugin_package(),
-            ],
-        );
-        workflow_core.run();
+        // Offload Deno execution to a blocking thread and rebuild CoreWorkflowCode in that thread
+        // to avoid moving non-Send types across await points.
+        let code_id = workflow_code.id.clone();
+        let code_body = workflow_code.code.clone();
+        let code_rev = workflow_code.code_revision;
 
-        let latest_result_revision = workflow_core
-            .result
-            .iter()
-            .map(|r| r.workflow_result_revision)
-            .max()
-            .unwrap_or(0);
+        let latest_result = tokio::task::spawn_blocking(move || {
+            let mut workflow_core = CoreWorkflowCode::new(
+                code_id,
+                code_body,
+                vec![
+                    fetch_plugin_package(),
+                    browser_info_plugin_package(),
+                ],
+                code_rev,
+            );
+            workflow_core.run();
 
-        let workflow_core_result_latest = workflow_core
-            .result
-            .iter()
-            .find(|r| r.workflow_result_revision == latest_result_revision);
+            let latest_result_revision = workflow_core
+                .result
+                .iter()
+                .map(|r| r.workflow_result_revision)
+                .max()
+                .unwrap_or(0);
+
+            workflow_core
+                .result
+                .into_iter()
+                .find(|r| r.workflow_result_revision == latest_result_revision)
+                .unwrap()
+        })
+        .await
+        .map_err(|e| tonic::Status::internal(format!("Join error: {e}")))?;
 
         let res = RunWorkflowResponse {
-            workflow_result: Some(workflow_core_result_latest.unwrap().clone()),
+            workflow_result: Some(latest_result),
             status: Some(sapphillon_core::proto::google::rpc::Status {
                 code: 0,
                 message: "Workflow executed successfully".to_string(),

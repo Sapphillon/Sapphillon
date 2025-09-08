@@ -38,7 +38,9 @@ serde_json = "1.0" # Add serde_json to workspace dependencies
 tonic = "0.12.0"
 prost = "0.13.1"
 prost-types = "0.13.1"
-sapphillon_core = { git = "https://github.com/Walkmana-25/Sapphillon-Core.git", tag = "v0.5.5-alpha" }
+# Use local core during development to allow runtime fixes.
+# You can revert to the git dependency if desired.
+sapphillon_core = { path = "./Saphillon-Core" }
 tonic-build = "0.12.0"
 
 [package]
@@ -66,8 +68,8 @@ sapphillon_core.workspace = true
 
 async-openai = "0.18.0"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde.workspace = true
+serde_json.workspace = true
 tokio-stream = "0.1.17"
 
 floorp-plugin-browser-info = {path = "./plugins/browser_info"}
