@@ -38,6 +38,6 @@ RUN go install github.com/ktr0731/evans@latest \
     && go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest \
     && go install github.com/fullstorydev/grpcui/cmd/grpcui@latest
     
-RUN cargo install tokei sea-orm-cli 
-
-
+    
+USER vscode
+RUN cargo install tokei sea-orm-cli
