@@ -44,13 +44,15 @@ pub async fn generate_workflow_async(
 
 #[allow(dead_code)]
 fn generate_prompt(user_query: &str) -> Result<String, Box<dyn std::error::Error>> {
-    let template = format!(
-        r#"
+    let today_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    let prompt = format!(
+    r#"
     ## System
 
     あなたは「Workflow Planner and Generator」です。
     あなたの役割は、与えられたタスクを達成するための **実行可能で明確なワークフロー** を設計し、
     その手順を **実際に動作するJavascript code `workflow.js`** として出力することです。
+    現在時刻: {today_date}
 
     ### 目的
     - ユーザーの質問や依頼を達成するための、再現性・信頼性の高い処理手順を定義する。
@@ -83,6 +85,7 @@ fn generate_prompt(user_query: &str) -> Result<String, Box<dyn std::error::Error
     - 情報未取得・アクセス不可・抽出失敗などに対し、代替手段、再試行、スコープ調整を検討する。
     6. **難しい問題に対する対処**
     - 難しい問題、複雑問題に対しては、問題を分解し、各要素を個別に検討するアプローチを取る。
+    - 難しい問題を単純化して考えるのではなく、問題の本質の本質を捉えて、長くても正確に解決する方法を優先する。
     ---
 
     ### 利用可能なTool
@@ -92,48 +95,47 @@ fn generate_prompt(user_query: &str) -> Result<String, Box<dyn std::error::Error
 
     ### 出力例
     ```javascript
-    function workflow() {{
-        /**
-         * タスクの概要:
-         * 1. ユーザー要求の核心を特定
-         * 2. 必要な情報源(URL)を決定
-         * 3. fetchで取得し、簡易抽出を実施
-         * 4. 結果をconsole.logで出力
-        */
-        try {{
-            // 1. 対象URLを決定（例: 公式ページ等）
-            const targetUrl = "https://example.com/"; // 要件に応じて設定
+    function workflow() {
+        const url = "https://api.example.com/data";
 
-            // 2. コンテンツ取得
-            const raw = fetch(targetUrl);
-            if (!raw || typeof raw !== "string") {{
-                throw new Error("コンテンツの取得に失敗しました。");
-            }}
+        try {
+            // fetch は文字列を返す（ツール仕様）のでそのまま受け取る
+            const body = fetch(url);
 
-            // 3. シンプルな抽出（例: <title> を取得）
-            const titleMatch = raw.match(/<title>([^<]+)<\/title>/i);
-            const title = titleMatch ? titleMatch[1].trim() : null;
+            // 受け取った文字列を JSON.parse でパースする（失敗検出）
+            let data;
+            try {
+            data = JSON.parse(body);
+            } catch (e) {
+            console.log(JSON.stringify({
+                ok: false,
+                reason: "JSON parse error",
+                error: String(e)
+            }));
+            return;
+            }
 
-            // 4. 出力（検証しやすいJSON形式）
-            console.log(JSON.stringify({{
-                source: targetUrl,
-                title: title,
-                length: raw.length
-            }}));
-        }} catch (err) {{
-            console.log(JSON.stringify({{
-                error: String(err && err.message ? err.message : err)
-            }}));
-        }}
-    }}
+            // 成功時はパースしたオブジェクトを出力する
+            console.log(JSON.stringify({
+            ok: true,
+            data: data
+            }));
+        } catch (e) {
+            // fetch が例外を投げた場合（ネットワークエラー等）
+            console.log(JSON.stringify({
+            ok: false,
+            reason: "fetch failed",
+            error: String(e)
+            }));
+        }
+    }
     ```
     ## User
     User Query(Task):
     - {user_query}
     - 使用言語: ja-JP
     "#
-    );
-    let prompt = template.replace("{user_query}", user_query);
+    , today_date=today_date, user_query=user_query);
     Ok(prompt)
 }
 
@@ -191,6 +193,16 @@ pub async fn _llm_call_async(user_query: &str) -> Result<String, Box<dyn Error>>
     Ok(content)
 }
 
+
+#[test]
+fn test_extract_first_code() -> Result<(), Box<dyn Error>> {
+    let result = extract_first_code("```javascript\nHello World\n```");
+    assert_eq!(result, Some("Hello World".to_string()));
+    println!("Extracted code: {:?}", result);
+    Ok(())
+}
+
+
 //.envがない状態ではテストを通過しないため、コメントアウト
 #[test]
 fn test_llm_call() -> Result<(), Box<dyn Error>> {
@@ -204,14 +216,6 @@ fn test_llm_call() -> Result<(), Box<dyn Error>> {
 fn test_generate_prompt() -> Result<(), Box<dyn Error>> {
     let prompt = generate_prompt("今日の天気はなんですか?")?;
     println!("{}", prompt);
-    Ok(())
-}
-
-#[test]
-fn test_extract_first_code() -> Result<(), Box<dyn Error>> {
-    let result = extract_first_code("```javascript\nHello World\n```");
-    assert_eq!(result, Some("Hello World".to_string()));
-    println!("Extracted code: {:?}", result);
     Ok(())
 }
 
