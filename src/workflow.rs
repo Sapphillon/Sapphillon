@@ -46,7 +46,7 @@ pub async fn generate_workflow_async(
 fn generate_prompt(user_query: &str) -> Result<String, Box<dyn std::error::Error>> {
     let today_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
     let prompt = format!(
-    r#"
+        r#"
     ## System
 
     あなたは「Workflow Planner and Generator」です。
@@ -95,47 +95,49 @@ fn generate_prompt(user_query: &str) -> Result<String, Box<dyn std::error::Error
 
     ### 出力例
     ```javascript
-    function workflow() {
+    function workflow() {{
         const url = "https://api.example.com/data";
 
-        try {
+        try {{
             // fetch は文字列を返す（ツール仕様）のでそのまま受け取る
             const body = fetch(url);
 
             // 受け取った文字列を JSON.parse でパースする（失敗検出）
             let data;
-            try {
+            try {{
             data = JSON.parse(body);
-            } catch (e) {
-            console.log(JSON.stringify({
+            }} catch (e) {{
+            console.log(JSON.stringify({{
                 ok: false,
                 reason: "JSON parse error",
                 error: String(e)
-            }));
+            }}));
             return;
-            }
+        }}
 
             // 成功時はパースしたオブジェクトを出力する
-            console.log(JSON.stringify({
+            console.log(JSON.stringify({{
             ok: true,
             data: data
-            }));
-        } catch (e) {
+        }}));
+    }} catch (e) {{
             // fetch が例外を投げた場合（ネットワークエラー等）
-            console.log(JSON.stringify({
-            ok: false,
-            reason: "fetch failed",
-            error: String(e)
-            }));
-        }
-    }
+            console.log(JSON.stringify({{
+                ok: false,
+                reason: "fetch failed",
+                error: String(e)
+            }}));
+        }}
+    }}
     ```
     ## User
     User Query(Task):
     - {user_query}
     - 使用言語: ja-JP
-    "#
-    , today_date=today_date, user_query=user_query);
+    "#,
+        today_date = today_date,
+        user_query = user_query
+    );
     Ok(prompt)
 }
 
@@ -193,7 +195,6 @@ pub async fn _llm_call_async(user_query: &str) -> Result<String, Box<dyn Error>>
     Ok(content)
 }
 
-
 #[test]
 fn test_extract_first_code() -> Result<(), Box<dyn Error>> {
     let result = extract_first_code("```javascript\nHello World\n```");
@@ -201,7 +202,6 @@ fn test_extract_first_code() -> Result<(), Box<dyn Error>> {
     println!("Extracted code: {:?}", result);
     Ok(())
 }
-
 
 //.envがない状態ではテストを通過しないため、コメントアウト
 // #[test]
