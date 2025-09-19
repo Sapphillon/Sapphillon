@@ -9,12 +9,12 @@ use sapphillon_core::runtime::OpStateWorkflowData;
 use std::fs;
 use std::sync::{Arc, Mutex};
 
-pub fn filesystem_plugin_function() -> PluginFunction {
+pub fn filesystem_read_plugin_function() -> PluginFunction {
     PluginFunction {
         function_id: "app.sapphillon.core.filesystem.read".to_string(),
-        function_name: "ReadFile".to_string(),
+        function_name: "fs.read".to_string(),
         description: "Reads a text file from the local filesystem and returns its contents as a string.".to_string(),
-        permissions: filesystem_plugin_permissions(),
+    permissions: filesystem_read_plugin_permissions(),
         arguments: "String: path".to_string(),
         returns: "String: content".to_string(),
     }
@@ -24,8 +24,8 @@ pub fn filesystem_plugin_package() -> PluginPackage {
     PluginPackage {
         package_id: "app.sapphillon.core.filesystem".to_string(),
         package_name: "Filesystem".to_string(),
-        description: "A plugin to read text files from the local filesystem.".to_string(),
-        functions: vec![filesystem_plugin_function()],
+        description: "A plugin to read and write text files from the local filesystem.".to_string(),
+    functions: vec![filesystem_read_plugin_function()],
         package_version: env!("CARGO_PKG_VERSION").to_string(),
         deprecated: None,
         plugin_store_url: "BUILTIN".to_string(),
@@ -36,29 +36,29 @@ pub fn filesystem_plugin_package() -> PluginPackage {
     }
 }
 
-pub fn core_filesystem_plugin() -> CorePluginFunction {
+pub fn core_filesystem_read_plugin() -> CorePluginFunction {
     CorePluginFunction::new(
         "app.sapphillon.core.filesystem.read".to_string(),
         "ReadFile".to_string(),
         "Reads a text file from the local filesystem and returns its contents as a string.".to_string(),
-        op2_read_file(),
+        op2_filesystem_read(),
         Some(include_str!("00_filesystem.js").to_string()),
     )
 }
 
-pub fn core_filesystem_plugin_package() -> CorePluginPackage {
+pub fn core_filesystem_read_plugin_package() -> CorePluginPackage {
     CorePluginPackage::new(
         "app.sapphillon.core.filesystem".to_string(),
         "Filesystem".to_string(),
-        vec![core_filesystem_plugin()],
+        vec![core_filesystem_read_plugin()],
     )
 }
 
-fn _permission_check_backend(
+fn _permission_check_backend_filesystem_read(
     allow: Vec<PluginFunctionPermissions>,
     path: String,
 ) -> Result<(), JsErrorBox> {
-    let mut perm = filesystem_plugin_permissions();
+    let mut perm = filesystem_read_plugin_permissions();
     perm[0].resource = vec![path.clone()];
     let required_permissions = sapphillon_core::permission::Permissions { permissions: perm };
 
@@ -67,7 +67,7 @@ fn _permission_check_backend(
 
         permissions_vec
             .into_iter()
-            .find(|p| p.plugin_function_id == filesystem_plugin_function().function_id)
+        .find(|p| p.plugin_function_id == filesystem_read_plugin_function().function_id)
             .map(|p| p.permissions)
             .unwrap_or_else(|| sapphillon_core::permission::Permissions { permissions: vec![] })
     };
@@ -83,7 +83,7 @@ fn _permission_check_backend(
     }
 }
 
-fn permission_check(state: &mut OpState, path: String) -> Result<(), JsErrorBox> {
+fn permission_check_filesystem_read(state: &mut OpState, path: String) -> Result<(), JsErrorBox> {
     let data = state
         .borrow::<Arc<Mutex<OpStateWorkflowData>>>()
         .lock()
@@ -91,35 +91,35 @@ fn permission_check(state: &mut OpState, path: String) -> Result<(), JsErrorBox>
     let allowed = match &data.get_allowed_permissions() {
         Some(p) => p,
         None => &vec![PluginFunctionPermissions {
-            plugin_function_id: filesystem_plugin_function().function_id,
-            permissions: sapphillon_core::permission::Permissions { permissions: filesystem_plugin_permissions() },
+            plugin_function_id: filesystem_read_plugin_function().function_id,
+            permissions: sapphillon_core::permission::Permissions { permissions: filesystem_read_plugin_permissions() },
         }],
     };
-    _permission_check_backend(allowed.clone(), path)?;
+    _permission_check_backend_filesystem_read(allowed.clone(), path)?;
     Ok(())
 }
 
 #[op2]
 #[string]
-fn op2_read_file(
+fn op2_filesystem_read(
     state: &mut OpState,
     #[string] path: String,
 ) -> std::result::Result<String, JsErrorBox> {
     // Permission check
-    permission_check(state, path.clone())?;
+    permission_check_filesystem_read(state, path.clone())?;
 
-    match read_file_text(&path) {
+        match read_file_text_filesystem_read(&path) {
         Ok(s) => Ok(s),
         Err(e) => Err(JsErrorBox::new("Error", e.to_string())),
     }
 }
 
-fn read_file_text(path: &str) -> anyhow::Result<String> {
+fn read_file_text_filesystem_read(path: &str) -> anyhow::Result<String> {
     let s = fs::read_to_string(path)?;
     Ok(s)
 }
 
-fn filesystem_plugin_permissions() -> Vec<Permission> {
+fn filesystem_read_plugin_permissions() -> Vec<Permission> {
     vec![Permission {
         display_name: "Filesystem Read".to_string(),
         description: "Allows the plugin to read files from the local filesystem.".to_string(),
@@ -143,7 +143,7 @@ mod tests {
         writeln!(f, "hello world").unwrap();
         let path = f.path().to_str().unwrap().to_string();
 
-        let res = read_file_text(&path);
+    let res = read_file_text_filesystem_read(&path);
         assert!(res.is_ok());
         let s = res.unwrap();
         assert!(s.contains("hello world"));
@@ -162,7 +162,7 @@ mod tests {
         std::fs::write(&tmp_path, "workflow-test").unwrap();
 
         let perm: PluginFunctionPermissions = PluginFunctionPermissions {
-            plugin_function_id: filesystem_plugin_function().function_id,
+            plugin_function_id: filesystem_read_plugin_function().function_id,
             permissions: sapphillon_core::permission::Permissions {
                 permissions: vec![Permission {
                     display_name: "Filesystem Read".to_string(),
@@ -177,7 +177,7 @@ mod tests {
         let mut workflow = CoreWorkflowCode::new(
             "test".to_string(),
             code.to_string(),
-            vec![core_filesystem_plugin_package()],
+            vec![core_filesystem_read_plugin_package()],
             1,
             Some(perm.clone()),
             Some(perm),

@@ -1,5 +1,5 @@
 function readFile(path) {
-    return Deno.core.ops.op2_read_file(path);
+    return Deno.core.ops.op2_filesystem_read(path);
 }
 
-globalThis.readFile = readFile;
+globalThis.fs.read = readFile;
