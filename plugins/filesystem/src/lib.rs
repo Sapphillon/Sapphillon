@@ -56,7 +56,7 @@ pub fn core_filesystem_read_plugin() -> CorePluginFunction {
     )
 }
 
-pub fn core_filesystem_read_plugin_package() -> CorePluginPackage {
+pub fn core_filesystem_plugin_package() -> CorePluginPackage {
     CorePluginPackage::new(
         "app.sapphillon.core.filesystem".to_string(),
         "Filesystem".to_string(),
@@ -305,7 +305,7 @@ mod tests {
         let mut workflow = CoreWorkflowCode::new(
             "test".to_string(),
             code.to_string(),
-            vec![core_filesystem_read_plugin_package()],
+            vec![core_filesystem_plugin_package()],
             1,
             Some(perm.clone()),
             Some(perm),
@@ -349,7 +349,7 @@ mod tests {
         let mut workflow = CoreWorkflowCode::new(
             "test-write".to_string(),
             code.to_string(),
-            vec![core_filesystem_read_plugin_package()],
+            vec![core_filesystem_plugin_package()],
             1,
             Some(perm.clone()),
             Some(perm),

@@ -12,6 +12,7 @@ dependencies = [
  "clap",
  "env_logger",
  "fetch",
+ "filesystem",
  "log",
  "prost",
  "prost-types",
