@@ -101,7 +101,7 @@ fn _permission_check_backend_filesystem_write(
 
         permissions_vec
             .into_iter()
-            .find(|p| p.plugin_function_id == filesystem_write_plugin_function().function_id)
+            .find(|p| p.plugin_function_id == filesystem_write_plugin_function().function_id || p.plugin_function_id == "*")
             .map(|p| p.permissions)
             .unwrap_or_else(|| sapphillon_core::permission::Permissions {
                 permissions: vec![],
@@ -181,7 +181,7 @@ fn _permission_check_backend_filesystem_read(
 
         permissions_vec
             .into_iter()
-            .find(|p| p.plugin_function_id == filesystem_read_plugin_function().function_id)
+            .find(|p| p.plugin_function_id == filesystem_read_plugin_function().function_id || p.plugin_function_id == "*")
             .map(|p| p.permissions)
             .unwrap_or_else(|| sapphillon_core::permission::Permissions {
                 permissions: vec![],
