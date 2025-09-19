@@ -168,33 +168,25 @@ impl WorkflowService for MyWorkflowService {
         request: tonic::Request<RunWorkflowRequest>,
     ) -> std::result::Result<tonic::Response<RunWorkflowResponse>, tonic::Status> {
         let req = request.into_inner();
-        if req.workflow_id.is_empty() && req.workflow_code_id.is_empty() {
-            return Err(tonic::Status::invalid_argument(
-                "Either workflow_id or workflow_code_id is required",
-            ));
-        }
+
+        // The proto defines RunWorkflowRequest with a `oneof source` which is either
+        // ById(WorkflowSourceById) or WorkflowDefinition(Workflow). Validate and
+        // extract the chosen source here.
+        let source = req.source.ok_or_else(|| {
+            tonic::Status::invalid_argument(
+                "RunWorkflowRequest.source is required (ById or WorkflowDefinition)",
+            )
+        })?;
+
         // Construct a placeholder Workflow until a real storage lookup is implemented.
-        let mut workflow = if !req.workflow_id.is_empty() {
-            Workflow {
-                id: req.workflow_id.clone(),
-                ..Default::default()
+        let mut workflow: Workflow = match source {
+            sapphillon_core::proto::sapphillon::v1::run_workflow_request::Source::ById(byid) => {
+                log::debug!("Received request, Workflow Code Id: {}, Workflow Id: {}", byid.workflow_code_id, byid.workflow_id);
+                Err(tonic::Status::unimplemented(
+                    "RunWorkflowRequest ById is not implemented",
+                ))?
             }
-        } else {
-            let wc = WorkflowCode {
-                id: req.workflow_code_id.clone(),
-                code_revision: 1,
-                code: "".to_string(),
-                language: 0,
-                created_at: None,
-                result: vec![],
-                plugin_packages: vec![],
-                plugin_function_ids: vec![],
-                allowed_permissions: vec![],
-            };
-            Workflow {
-                workflow_code: vec![wc],
-                ..Default::default()
-            }
+            sapphillon_core::proto::sapphillon::v1::run_workflow_request::Source::WorkflowDefinition(wf) => wf,
         };
         let latest_workflow_code_revision = workflow
             .workflow_code
