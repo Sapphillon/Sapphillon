@@ -294,6 +294,8 @@ mod tests {
         let tmp_path = tmp_path_buf.to_str().unwrap().to_string();
         std::fs::write(&tmp_path_buf, "workflow-test").unwrap();
 
+        let tmp_path = tmp_path.replace(r"\", r"\\");
+
         // Build JS code with the properly-escaped path string so backslashes on Windows
         // don't create invalid escape sequences in the JS literal.
         let code = format!(
@@ -339,6 +341,8 @@ mod tests {
         tmp_path_buf.push("__sapphillon_test_write__");
         let tmp_path = tmp_path_buf.to_str().unwrap().to_string();
         let _ = std::fs::remove_file(&tmp_path_buf);
+
+        let tmp_path = tmp_path.replace(r"\", r"\\");
 
         // Build JS code with escaped path literal
         let code = format!(
