@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
         .init();
 
     // Display application information
-    let app_info = sysconfig::SYSCONFIG.app_info();
+    let app_info = sysconfig::sysconfig().app_info();
     for line in app_info.lines() {
         log::info!("{line}");
     }

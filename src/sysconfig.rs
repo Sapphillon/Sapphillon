@@ -2,6 +2,9 @@ use crate::sysconfig;
 use sapphillon_core::plugin::CorePluginPackage;
 use sapphillon_core::proto::sapphillon::v1::PluginPackage;
 
+use fetch::{core_fetch_plugin_package, fetch_plugin_package};
+use filesystem::{core_filesystem_plugin_package, filesystem_plugin_package};
+
 // Sapphillon
 // Copyright 2025 Yuta Takahashi
 //
@@ -20,12 +23,20 @@ use sapphillon_core::proto::sapphillon::v1::PluginPackage;
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub const SYSCONFIG: SysConfig = SysConfig {
-    app_name: "Sapphillon",
-    version: env!("CARGO_PKG_VERSION"),
-    authors: env!("CARGO_PKG_AUTHORS"),
-    copyright_year: 2025,
-};
+pub fn sysconfig() -> SysConfig {
+    SysConfig {
+        app_name: "Sapphillon",
+        version: env!("CARGO_PKG_VERSION"),
+        authors: env!("CARGO_PKG_AUTHORS"),
+        copyright_year: 2025,
+
+        core_plugin_package: vec![
+            core_fetch_plugin_package(),
+            core_filesystem_plugin_package(),
+        ],
+        plugin_package: vec![fetch_plugin_package(), filesystem_plugin_package()],
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct SysConfig {
@@ -33,8 +44,9 @@ pub struct SysConfig {
     pub version: &'static str,
     pub authors: &'static str,
     pub copyright_year: u16,
-    
 
+    pub core_plugin_package: Vec<CorePluginPackage>,
+    pub plugin_package: Vec<PluginPackage>,
 }
 
 impl SysConfig {
