@@ -1,4 +1,3 @@
-use crate::sysconfig;
 use sapphillon_core::plugin::CorePluginPackage;
 use sapphillon_core::proto::sapphillon::v1::PluginPackage;
 
