@@ -17,7 +17,3 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod entity;
-pub mod convert;
-
-#[allow(unused)]
-pub use convert::*;
