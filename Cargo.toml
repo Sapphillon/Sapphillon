@@ -16,7 +16,7 @@ members = [
     "plugins/*",
     "migration",
     "entity"
-]
+, "database"]
 
 [workspace.dependencies]
 anyhow = "1.0"
