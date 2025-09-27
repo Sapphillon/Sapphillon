@@ -958,6 +958,7 @@ dependencies = [
  "entity",
  "sapphillon_core",
  "sea-orm",
+ "tokio",
 ]
 
 [[package]]
