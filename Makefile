@@ -3,7 +3,7 @@
 rust_test:
 	@echo "Run Rust Tests"
 	@echo "----------------------------------------------------------"
-	cargo test --workspace --all-features
+	RUST_TEST_THREADS=1 cargo test --workspace --all-features
 	@echo "----------------------------------------------------------"
 
 rust_build:
