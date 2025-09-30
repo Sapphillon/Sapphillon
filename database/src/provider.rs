@@ -16,17 +16,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use entity::entity::provider;
-use sea_orm::{DatabaseConnection, DbErr, ActiveModelTrait, EntityTrait, QuerySelect};
-use base64::engine::general_purpose;
 use base64::Engine as _;
-
+use base64::engine::general_purpose;
+use entity::entity::provider;
+use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, EntityTrait, QuerySelect};
 
 pub async fn create_provider(
     db: &DatabaseConnection,
     provider: provider::Model,
 ) -> Result<(), DbErr> {
-
     let active_model: provider::ActiveModel = provider.into();
     // Use insert to ensure a new record is created. save() can try to perform an update
     // when the primary key is already set on the ActiveModel, which causes RecordNotFound
@@ -39,31 +37,32 @@ pub async fn get_provider(
     db: &DatabaseConnection,
     name: &str,
 ) -> Result<Option<provider::Model>, DbErr> {
-    let provider = provider::Entity::find_by_id(name.to_string()).one(db).await?;
+    let provider = provider::Entity::find_by_id(name.to_string())
+        .one(db)
+        .await?;
     Ok(provider)
 }
 
 pub async fn list_providers(
     db: &DatabaseConnection,
     next_page_token: Option<String>,
-    page_size: Option<u32>
-) -> Result<(Vec<provider::Model>, String), DbErr> { // Return a tuple of (list, next_page_token)
+    page_size: Option<u32>,
+) -> Result<(Vec<provider::Model>, String), DbErr> {
+    // Return a tuple of (list, next_page_token)
     // Decode next_page_token as base64 u64 offset. If missing or invalid, start at 0.
     let offset: u64 = match next_page_token {
-        Some(token) => {
-            match general_purpose::STANDARD.decode(token) {
-                Ok(bytes) => {
-                    if bytes.len() == 8 {
-                        let mut arr = [0u8; 8];
-                        arr.copy_from_slice(&bytes);
-                        u64::from_be_bytes(arr)
-                    } else {
-                        0u64
-                    }
+        Some(token) => match general_purpose::STANDARD.decode(token) {
+            Ok(bytes) => {
+                if bytes.len() == 8 {
+                    let mut arr = [0u8; 8];
+                    arr.copy_from_slice(&bytes);
+                    u64::from_be_bytes(arr)
+                } else {
+                    0u64
                 }
-                Err(_) => 0u64,
             }
-        }
+            Err(_) => 0u64,
+        },
         None => 0u64,
     };
 
@@ -99,11 +98,10 @@ pub async fn list_providers(
     Ok((providers, next_page_token))
 }
 
-pub async fn delete_provider(
-    db: &DatabaseConnection,
-    name: &str,
-) -> Result<(), DbErr> {
-    let provider = provider::Entity::find_by_id(name.to_string()).one(db).await?;
+pub async fn delete_provider(db: &DatabaseConnection, name: &str) -> Result<(), DbErr> {
+    let provider = provider::Entity::find_by_id(name.to_string())
+        .one(db)
+        .await?;
     if let Some(provider) = provider {
         let active_model: provider::ActiveModel = provider.into();
         active_model.delete(db).await?;
@@ -114,7 +112,9 @@ pub async fn delete_provider(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, EntityTrait, Statement};
+    use sea_orm::{
+        ConnectionTrait, Database, DatabaseConnection, DbBackend, EntityTrait, Statement,
+    };
 
     async fn setup_db() -> Result<DatabaseConnection, DbErr> {
         // Use an in-memory SQLite database for testing
@@ -129,7 +129,8 @@ mod tests {
                 api_endpoint TEXT NOT NULL
             )
         "#;
-        db.execute(Statement::from_string(DbBackend::Sqlite, sql.to_string())).await?;
+        db.execute(Statement::from_string(DbBackend::Sqlite, sql.to_string()))
+            .await?;
 
         Ok(db)
     }
@@ -149,7 +150,9 @@ mod tests {
         create_provider(&db, model).await?;
 
         // Verify the provider was inserted
-        let found = provider::Entity::find_by_id("test_provider".to_string()).one(&db).await?;
+        let found = provider::Entity::find_by_id("test_provider".to_string())
+            .one(&db)
+            .await?;
         assert!(found.is_some(), "Inserted provider should be found");
         let found = found.unwrap();
         assert_eq!(found.name, "test_provider");
@@ -180,8 +183,12 @@ mod tests {
         create_provider(&db, a).await?;
         create_provider(&db, b).await?;
 
-        let found_a = provider::Entity::find_by_id("prov_a".to_string()).one(&db).await?;
-        let found_b = provider::Entity::find_by_id("prov_b".to_string()).one(&db).await?;
+        let found_a = provider::Entity::find_by_id("prov_a".to_string())
+            .one(&db)
+            .await?;
+        let found_b = provider::Entity::find_by_id("prov_b".to_string())
+            .one(&db)
+            .await?;
 
         assert!(found_a.is_some(), "prov_a should be found");
         assert!(found_b.is_some(), "prov_b should be found");
@@ -204,7 +211,10 @@ mod tests {
         create_provider(&db, model).await?;
 
         let found = get_provider(&db, "test_provider_get").await?;
-        assert!(found.is_some(), "get_provider should return Some for existing provider");
+        assert!(
+            found.is_some(),
+            "get_provider should return Some for existing provider"
+        );
         let found = found.unwrap();
         assert_eq!(found.name, "test_provider_get");
         assert_eq!(found.display_name, "Get Provider");
@@ -220,7 +230,10 @@ mod tests {
 
         // Ensure requesting a non-existent provider returns None
         let found = get_provider(&db, "nonexistent").await?;
-        assert!(found.is_none(), "get_provider should return None for missing provider");
+        assert!(
+            found.is_none(),
+            "get_provider should return None for missing provider"
+        );
 
         Ok(())
     }
@@ -279,10 +292,17 @@ mod tests {
         }
 
         // Provide an invalid token; function should treat it as offset 0 and return first page
-        let (items, next) = list_providers(&db, Some("not-a-valid-token".to_string()), Some(2)).await?;
-        assert!(!items.is_empty(), "Should return some items when token is invalid");
+        let (items, next) =
+            list_providers(&db, Some("not-a-valid-token".to_string()), Some(2)).await?;
+        assert!(
+            !items.is_empty(),
+            "Should return some items when token is invalid"
+        );
         // Because there are 3 items and page_size=2, there should be a next token
-        assert!(!next.is_empty(), "Should return a next_page_token when more pages exist");
+        assert!(
+            !next.is_empty(),
+            "Should return a next_page_token when more pages exist"
+        );
 
         Ok(())
     }
@@ -308,7 +328,9 @@ mod tests {
         assert!(!next_token.is_empty(), "should have a next token");
 
         // Decode token and check it equals offset 2
-        let decoded = general_purpose::STANDARD.decode(next_token.clone()).expect("decode token");
+        let decoded = general_purpose::STANDARD
+            .decode(next_token.clone())
+            .expect("decode token");
         assert_eq!(decoded.len(), 8, "token should decode to 8 bytes");
         let mut arr = [0u8; 8];
         arr.copy_from_slice(&decoded);
@@ -319,7 +341,10 @@ mod tests {
         let (second_page, final_token) = list_providers(&db, Some(next_token), Some(2)).await?;
         assert_eq!(second_page.len(), 2, "second page should contain 2 items");
         // Since there were 4 total and page size 2, final token should be empty
-        assert!(final_token.is_empty(), "final token should be empty when no more pages");
+        assert!(
+            final_token.is_empty(),
+            "final token should be empty when no more pages"
+        );
 
         Ok(())
     }
@@ -339,14 +364,18 @@ mod tests {
         create_provider(&db, model).await?;
 
         // Ensure it exists
-        let found = provider::Entity::find_by_id("del_test".to_string()).one(&db).await?;
+        let found = provider::Entity::find_by_id("del_test".to_string())
+            .one(&db)
+            .await?;
         assert!(found.is_some(), "provider should exist before deletion");
 
         // Delete the provider
         delete_provider(&db, "del_test").await?;
 
         // Ensure it's gone
-        let found = provider::Entity::find_by_id("del_test".to_string()).one(&db).await?;
+        let found = provider::Entity::find_by_id("del_test".to_string())
+            .one(&db)
+            .await?;
         assert!(found.is_none(), "provider should be removed after deletion");
 
         // Deleting again should not error

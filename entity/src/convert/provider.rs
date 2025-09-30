@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use sapphillon_core::proto::sapphillon::ai::v1::Provider as ProtoProvider;
 use crate::entity::provider::Model as EntityProvider;
+use sapphillon_core::proto::sapphillon::ai::v1::Provider as ProtoProvider;
 
 impl From<EntityProvider> for ProtoProvider {
     fn from(entity: EntityProvider) -> Self {
