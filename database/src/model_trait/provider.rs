@@ -16,5 +16,5 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use sapphillon_core::proto::sapphillon::ai::v1::Models as ProtoModels;
-use entity::entity::model::Model as EntityModel;
+use sapphillon_core::proto::sapphillon::ai::v1::Provider as ProtoProvider;
+use entity::entity::provider::Model as EntityProvider;
