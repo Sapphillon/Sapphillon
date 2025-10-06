@@ -43,6 +43,18 @@ pub async fn get_provider(
     Ok(provider)
 }
 
+pub async fn update_provider(
+    db: &DatabaseConnection,
+    provider: provider::Model,
+) -> Result<(), DbErr> {
+    // Ensure the provider exists before updating
+    let _ = get_provider(db, &provider.name).await?;
+
+    let active_model: provider::ActiveModel = provider.into();
+    active_model.update(db).await?;
+    Ok(())
+}
+
 pub async fn list_providers(
     db: &DatabaseConnection,
     next_page_token: Option<String>,
