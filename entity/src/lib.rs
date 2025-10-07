@@ -19,5 +19,7 @@
 pub mod convert;
 pub mod entity;
 
+pub use entity::provider;
+
 #[allow(unused)]
 use convert::*;
