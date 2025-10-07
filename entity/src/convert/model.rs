@@ -16,10 +16,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub mod provider;
-pub mod model;
+use crate::entity::model::Model as EntityModel;
+use sapphillon_core::proto::sapphillon::ai::v1::Models as ProtoModel;
 
-#[allow(unused)]
-pub use provider::*;
-#[allow(unused)]
-pub use model::*;
+impl From<EntityModel> for ProtoModel {
+    fn from(entity: EntityModel) -> Self {
+        ProtoModel {
+            name: entity.name,
+            display_name: entity.display_name,
+            description: entity.description,
+            provider_name: entity.provider_name,
+        }
+    }
+}
+
+impl From<ProtoModel> for EntityModel {
+    fn from(proto: ProtoModel) -> Self {
+        EntityModel {
+            name: proto.name,
+            display_name: proto.display_name,
+            description: proto.description,
+            provider_name: proto.provider_name,
+        }
+    }
+}
+
+
+
