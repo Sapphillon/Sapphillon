@@ -18,10 +18,12 @@
 
 // Service root module
 
+mod model;
 mod provider;
 mod version;
 mod workflow;
 
+pub use model::*;
 pub use provider::*;
 pub use version::*;
 pub use workflow::*;

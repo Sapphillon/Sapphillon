@@ -18,8 +18,9 @@
 
 // gRPC server startup logic
 
-use crate::services::{MyProviderService, MyVersionService, MyWorkflowService};
+use crate::services::{MyModelService, MyProviderService, MyVersionService, MyWorkflowService};
 use log::info;
+use sapphillon_core::proto::sapphillon::ai::v1::model_service_server::ModelServiceServer;
 use sapphillon_core::proto::sapphillon::ai::v1::provider_service_server::ProviderServiceServer;
 use sapphillon_core::proto::sapphillon::v1::version_service_server::VersionServiceServer;
 use sapphillon_core::proto::sapphillon::v1::workflow_service_server::WorkflowServiceServer;
@@ -38,6 +39,15 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
             err
         })?;
     let provider_service = MyProviderService::new(provider_connection);
+
+    let model_connection = crate::GLOBAL_STATE
+        .wait_init_and_get_connection()
+        .await
+        .map_err(|err| {
+            log::error!("Failed to obtain database connection for model service: {err:?}");
+            err
+        })?;
+    let model_service = MyModelService::new(model_connection);
 
     let reflection_service_v1 = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(
@@ -144,6 +154,7 @@ pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(tonic_web::enable(WorkflowServiceServer::new(
             workflow_service,
         )))
+        .add_service(tonic_web::enable(ModelServiceServer::new(model_service)))
         .add_service(tonic_web::enable(ProviderServiceServer::new(
             provider_service,
         )))
