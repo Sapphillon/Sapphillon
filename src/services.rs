@@ -18,10 +18,10 @@
 
 // Service root module
 
+mod provider;
 mod version;
 mod workflow;
-mod provider;
 
+pub use provider::*;
 pub use version::*;
 pub use workflow::*;
-pub use provider::*;

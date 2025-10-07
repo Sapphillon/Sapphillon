@@ -436,6 +436,7 @@ mod tests {
         {
             let mut w = gs.data.try_write().expect("should acquire write lock");
             w.db_url = "sqlite::memory:".to_string();
+            w.db_initialized = true;
         }
 
         let conn = gs.get_db_connection().await;

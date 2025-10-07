@@ -37,7 +37,7 @@ use migration::MigratorTrait;
 use server::start_server; // bring `up`/`down` methods into scope
 
 #[allow(unused)]
-static GLOBAL_STATE: global::GlobalState = global::GlobalState::new();
+pub(crate) static GLOBAL_STATE: global::GlobalState = global::GlobalState::new();
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
