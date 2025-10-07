@@ -75,6 +75,11 @@ async fn main() -> Result<()> {
             // Start the gRPC server and demonstrate client communication
             debug!("Log level set to: {:?}", args.loglevel);
 
+            // Initialize Database Connection
+            GLOBAL_STATE.async_set_db_url(args.db_url.clone()).await;
+
+            debug!("GLOBAL_STATE: {GLOBAL_STATE}");
+
             // Start server in a background task
             let server_handle = tokio::spawn(async {
                 if let Err(e) = start_server().await {
