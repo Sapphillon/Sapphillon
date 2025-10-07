@@ -21,6 +21,9 @@ mod server;
 mod services;
 mod workflow;
 
+#[allow(unused)]
+mod global;
+
 /// System Configuration
 #[allow(unused)]
 mod sysconfig;
@@ -31,10 +34,15 @@ use log::{debug, error, info};
 
 use args::{Args, Command};
 use server::start_server;
+use std::sync::RwLock;
+
+#[allow(unused)]
+static GLOBAL_STATE: RwLock<global::GlobalState> = RwLock::new(global::GlobalState::new());
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let args = Args::parse();
+
     // Initialize logger with the log level from command line arguments
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::new(
