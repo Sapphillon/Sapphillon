@@ -18,8 +18,8 @@
 
 use base64::Engine as _;
 use base64::engine::general_purpose;
-use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, EntityTrait, QuerySelect};
 use entity::entity::model;
+use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, EntityTrait, QuerySelect};
 
 pub async fn create_model(db: &DatabaseConnection, model: model::Model) -> Result<(), DbErr> {
     let active_model: model::ActiveModel = model.into();
@@ -74,7 +74,11 @@ pub async fn list_models(
     };
 
     let query_limit = limit.saturating_add(1);
-    let mut items = model::Entity::find().offset(Some(offset)).limit(Some(query_limit)).all(db).await?;
+    let mut items = model::Entity::find()
+        .offset(Some(offset))
+        .limit(Some(query_limit))
+        .all(db)
+        .await?;
 
     let has_next = (items.len() as u64) > limit;
     if has_next {
@@ -104,8 +108,10 @@ pub async fn delete_model(db: &DatabaseConnection, name: &str) -> Result<(), DbE
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, EntityTrait, Statement};
     use entity::provider as entity_provider;
+    use sea_orm::{
+        ConnectionTrait, Database, DatabaseConnection, DbBackend, EntityTrait, Statement,
+    };
 
     async fn setup_db() -> Result<DatabaseConnection, DbErr> {
         // In-memory SQLite for tests
@@ -120,8 +126,11 @@ mod tests {
                 api_endpoint TEXT NOT NULL
             )
         "#;
-        db.execute(Statement::from_string(DbBackend::Sqlite, sql_provider.to_string()))
-            .await?;
+        db.execute(Statement::from_string(
+            DbBackend::Sqlite,
+            sql_provider.to_string(),
+        ))
+        .await?;
 
         // Create model table
         let sql_model = r#"
@@ -132,8 +141,11 @@ mod tests {
                 provider_name TEXT NOT NULL
             )
         "#;
-        db.execute(Statement::from_string(DbBackend::Sqlite, sql_model.to_string()))
-            .await?;
+        db.execute(Statement::from_string(
+            DbBackend::Sqlite,
+            sql_model.to_string(),
+        ))
+        .await?;
 
         Ok(db)
     }
@@ -244,8 +256,14 @@ mod tests {
         }
 
         let (items, next) = list_models(&db, Some("not-a-token".to_string()), Some(2)).await?;
-        assert!(!items.is_empty(), "should return items with invalid token treated as offset 0");
-        assert!(!next.is_empty(), "should return next token when more pages exist");
+        assert!(
+            !items.is_empty(),
+            "should return items with invalid token treated as offset 0"
+        );
+        assert!(
+            !next.is_empty(),
+            "should return next token when more pages exist"
+        );
         Ok(())
     }
 
@@ -275,7 +293,9 @@ mod tests {
         assert_eq!(first.len(), 2);
         assert!(!token.is_empty());
 
-        let decoded = general_purpose::STANDARD.decode(token.clone()).expect("decode");
+        let decoded = general_purpose::STANDARD
+            .decode(token.clone())
+            .expect("decode");
         assert_eq!(decoded.len(), 8);
         let mut arr = [0u8; 8];
         arr.copy_from_slice(&decoded);

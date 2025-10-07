@@ -40,6 +40,3 @@ impl From<ProtoModel> for EntityModel {
         }
     }
 }
-
-
-

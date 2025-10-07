@@ -16,13 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use tokio::sync::RwLock;
 use std::sync::LazyLock;
+use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct GlobalStateData {
     db_initialized: bool,
-    db_url: String
+    db_url: String,
 }
 
 #[derive(Debug)]
@@ -33,13 +33,15 @@ pub struct GlobalState {
 impl GlobalState {
     pub const fn new() -> Self {
         GlobalState {
-            data: LazyLock::new(|| RwLock::new(GlobalStateData {
-                db_initialized: false,
-                db_url: String::new(),
-            })),
+            data: LazyLock::new(|| {
+                RwLock::new(GlobalStateData {
+                    db_initialized: false,
+                    db_url: String::new(),
+                })
+            }),
         }
     }
-    
+
     pub async fn async_set_db_initialized(&self, initialized: bool) {
         let mut data = self.data.write().await;
         data.db_initialized = initialized;
@@ -76,7 +78,7 @@ impl GlobalState {
             log::info!("Waiting for DB to be initialized...{count}");
             tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
             count += 1;
-            
+
             if (count > 10) {
                 log::warn!("Still waiting for DB to be initialized after {count} seconds...");
             }
@@ -84,9 +86,8 @@ impl GlobalState {
                 log::error!("Waited over a minute for DB to be initialized, giving up.");
                 anyhow::bail!("Timeout waiting for DB to be initialized");
             }
-                
         }
-        
+
         Ok(())
     }
 }
@@ -96,12 +97,15 @@ impl std::fmt::Display for GlobalState {
         // Use the non-blocking try_read so we don't block the current thread
         // (blocking_read would panic if called from a Tokio runtime thread).
         match self.data.try_read() {
-            Ok(data) => write!(f, "GlobalState {{ db_initialized: {}, db_url: '{}' }}", data.db_initialized, data.db_url),
+            Ok(data) => write!(
+                f,
+                "GlobalState {{ db_initialized: {}, db_url: '{}' }}",
+                data.db_initialized, data.db_url
+            ),
             Err(_) => write!(f, "GlobalState {{ <locked> }}"),
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -113,8 +117,14 @@ mod tests {
     fn display_unlocked_shows_defaults() {
         let gs = GlobalState::new();
         let s = format!("{gs}");
-        assert!(s.contains("db_initialized: false"), "display should show db_initialized: false, got: {s}");
-        assert!(s.contains("db_url: ''"), "display should show empty db_url, got: {s}");
+        assert!(
+            s.contains("db_initialized: false"),
+            "display should show db_initialized: false, got: {s}"
+        );
+        assert!(
+            s.contains("db_url: ''"),
+            "display should show empty db_url, got: {s}"
+        );
     }
 
     #[test]
@@ -123,8 +133,11 @@ mod tests {
 
         // Acquire an exclusive write lock so try_read inside Display fails
         let write_guard = gs.data.try_write().expect("should acquire write lock");
-    let s = format!("{gs}");
-    assert!(s.contains("<locked>"), "display should indicate locked state, got: {s}");
+        let s = format!("{gs}");
+        assert!(
+            s.contains("<locked>"),
+            "display should indicate locked state, got: {s}"
+        );
 
         // drop the guard to release lock (explicit for clarity)
         drop(write_guard);
@@ -141,9 +154,15 @@ mod tests {
             w.db_url = "sqlite://:memory:".to_string();
         }
 
-    let s = format!("{gs}");
-    assert!(s.contains("db_initialized: true"), "display should show db_initialized: true, got: {s}");
-    assert!(s.contains("sqlite://:memory:"), "display should show updated db_url, got: {s}");
+        let s = format!("{gs}");
+        assert!(
+            s.contains("db_initialized: true"),
+            "display should show db_initialized: true, got: {s}"
+        );
+        assert!(
+            s.contains("sqlite://:memory:"),
+            "display should show updated db_url, got: {s}"
+        );
     }
 
     #[test]
@@ -160,12 +179,18 @@ mod tests {
         }
 
         // now should report true
-        assert!(gs.is_db_initialized(), "is_db_initialized should return true after setting the flag");
+        assert!(
+            gs.is_db_initialized(),
+            "is_db_initialized should return true after setting the flag"
+        );
 
         // if we hold the write lock, try_read inside is_db_initialized will fail -> returns false
         let mut guard = gs.data.try_write().expect("should acquire write lock");
         guard.db_initialized = true;
-        assert!(!gs.is_db_initialized(), "is_db_initialized should return false while locked (try_read fails)");
+        assert!(
+            !gs.is_db_initialized(),
+            "is_db_initialized should return false while locked (try_read fails)"
+        );
         drop(guard);
     }
 
@@ -181,7 +206,10 @@ mod tests {
 
         // should return immediately (use a timeout to protect the test)
         let res = tokio::time::timeout(Duration::from_secs(1), gs.wait_db_initialized()).await;
-        assert!(res.is_ok(), "wait_db_initialized should return immediately when already initialized");
+        assert!(
+            res.is_ok(),
+            "wait_db_initialized should return immediately when already initialized"
+        );
     }
 
     #[tokio::test]
@@ -198,7 +226,10 @@ mod tests {
 
         // wait_db_initialized should complete once the flag is set; use timeout so test fails fast on regressions
         let res = tokio::time::timeout(Duration::from_secs(2), gs.wait_db_initialized()).await;
-        assert!(res.is_ok(), "wait_db_initialized should return after the flag is set by another task");
+        assert!(
+            res.is_ok(),
+            "wait_db_initialized should return after the flag is set by another task"
+        );
     }
 
     #[tokio::test]
@@ -242,7 +273,10 @@ mod tests {
         }
 
         let s = format!("{gs}");
-        assert!(s.contains("postgres://localhost/mydb"), "display should show updated db_url, got: {s}");
+        assert!(
+            s.contains("postgres://localhost/mydb"),
+            "display should show updated db_url, got: {s}"
+        );
     }
 
     #[tokio::test]
@@ -253,7 +287,10 @@ mod tests {
         gs.async_set_db_initialized(true).await;
 
         // try_read should succeed and report true
-        assert!(gs.is_db_initialized(), "async_set_db_initialized should set the flag to true");
+        assert!(
+            gs.is_db_initialized(),
+            "async_set_db_initialized should set the flag to true"
+        );
     }
 
     #[tokio::test]
@@ -282,4 +319,3 @@ mod tests {
         assert!(res, "set_db_initialized spawn did not set the flag in time");
     }
 }
-
