@@ -34,6 +34,7 @@ use log::{debug, error, info, warn};
 
 use args::{Args, Command};
 use server::start_server;
+use migration::MigratorTrait; // bring `up`/`down` methods into scope
 
 #[allow(unused)]
 static GLOBAL_STATE: global::GlobalState = global::GlobalState::new();
@@ -77,6 +78,31 @@ async fn main() -> Result<()> {
 
             // Initialize Database Connection
             GLOBAL_STATE.async_set_db_url(args.db_url.clone()).await;
+
+            // Run migrations immediately after setting DB URL so the schema
+            // is ready before the server starts accepting requests.
+            info!("Running database migrations...");
+            let database_connection = sea_orm::Database::connect(GLOBAL_STATE.async_get_db_url().await.as_str()).await;
+            match database_connection {
+                Ok(conn) => {
+                    // Attempt to run migrations from the `migration` crate.
+                    // If this fails, log the error and exit since the server
+                    // depends on a correct schema state.
+                    if let Err(e) = migration::Migrator::up(&conn, None).await {
+                        error!("Database migration failed: {e:#?}");
+                        // Ensure we don't continue in a bad state.
+                        std::process::exit(1);
+                    }
+
+                    // Mark DB as initialized so other tasks can proceed.
+                    GLOBAL_STATE.async_set_db_initialized(true).await;
+                    info!("Database migrations applied");
+                }
+                Err(e) => {
+                    error!("Failed to obtain DB connection for migrations: {e:#?}");
+                    std::process::exit(1);
+                }
+            }
 
             debug!("GLOBAL_STATE: {GLOBAL_STATE}");
 
