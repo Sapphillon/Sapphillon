@@ -33,8 +33,8 @@ use clap::Parser;
 use log::{debug, error, info, warn};
 
 use args::{Args, Command};
-use server::start_server;
-use migration::MigratorTrait; // bring `up`/`down` methods into scope
+use migration::MigratorTrait;
+use server::start_server; // bring `up`/`down` methods into scope
 
 #[allow(unused)]
 static GLOBAL_STATE: global::GlobalState = global::GlobalState::new();
@@ -82,7 +82,8 @@ async fn main() -> Result<()> {
             // Run migrations immediately after setting DB URL so the schema
             // is ready before the server starts accepting requests.
             info!("Running database migrations...");
-            let database_connection = sea_orm::Database::connect(GLOBAL_STATE.async_get_db_url().await.as_str()).await;
+            let database_connection =
+                sea_orm::Database::connect(GLOBAL_STATE.async_get_db_url().await.as_str()).await;
             match database_connection {
                 Ok(conn) => {
                     // Attempt to run migrations from the `migration` crate.
