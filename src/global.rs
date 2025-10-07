@@ -45,6 +45,11 @@ impl GlobalState {
 
     pub async fn get_db_connection(&self) -> anyhow::Result<DatabaseConnection> {
         let data = self.data.read().await;
+        
+        if !data.db_initialized {
+            anyhow::bail!("Database is not initialized");
+        }
+        
         if data.db_url.is_empty() {
             anyhow::bail!("Database URL is not set");
         }
