@@ -34,28 +34,23 @@ use log::{debug, error, info};
 
 use args::{Args, Command};
 use server::start_server;
-use std::sync::RwLock;
 
 #[allow(unused)]
-static GLOBAL_STATE: RwLock<global::GlobalState> = RwLock::new(global::GlobalState::new());
+static GLOBAL_STATE: global::GlobalState = global::GlobalState::new();
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let args = Args::parse();
 
-    // Initialize logger with the log level from command line arguments
+    // Initialize tracing/logging once (combine settings to avoid double init)
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::new(
             args.loglevel.to_string(),
         ))
-        .init();
-
-    // orm log
-    tracing_subscriber::fmt()
+        // keep ORM and debug-related verbosity and useful thread info
         .with_max_level(tracing::Level::DEBUG)
         .with_thread_ids(true)
         .with_thread_names(true)
-        .with_test_writer()
         .init();
 
     // Display application information
@@ -63,6 +58,9 @@ async fn main() -> Result<()> {
     for line in app_info.lines() {
         log::info!("{line}");
     }
+    // End Initialization
+
+    debug!("GLOBAL_STATE: {GLOBAL_STATE}");
 
     match args.command {
         Command::Start => {
