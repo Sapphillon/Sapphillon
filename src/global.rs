@@ -345,4 +345,64 @@ mod tests {
 
         assert!(res, "set_db_initialized spawn did not set the flag in time");
     }
+
+    #[tokio::test]
+    async fn async_set_and_get_db_url_roundtrip() {
+        let gs = GlobalState::new();
+
+        // set the url asynchronously and then read it back
+        gs.async_set_db_url("sqlite://async-test".to_string()).await;
+        let got = gs.async_get_db_url().await;
+        assert_eq!(got, "sqlite://async-test");
+    }
+
+    #[test]
+    fn get_db_url_blocking_returns_value_from_background() {
+        use std::sync::Arc;
+
+        let gs = Arc::new(GlobalState::new());
+
+        // set value via direct write so the blocking reader can observe it
+        {
+            let mut w = gs.data.try_write().expect("should acquire write lock");
+            w.db_url = "postgres://blocking".to_string();
+        }
+
+        // Run the blocking getter inside a Tokio runtime so block_in_place and
+        // Handle::current() succeed. We run it on a separate thread that
+        // creates its own runtime to avoid interfering with the test harness.
+        let gs_clone = Arc::clone(&gs);
+        let handle = std::thread::spawn(move || {
+            let rt = tokio::runtime::Runtime::new().expect("create runtime");
+            rt.block_on(async move { gs_clone.get_db_url_blocking() })
+        });
+        let got = handle.join().expect("thread panicked");
+        assert_eq!(got, "postgres://blocking");
+    }
+
+    #[tokio::test]
+    async fn set_db_url_spawns_and_sets_value() {
+        use std::sync::Arc;
+        let gs = Arc::new(GlobalState::new());
+
+        // call the non-async setter which spawns a background task
+        let gs_clone = Arc::clone(&gs);
+        gs_clone.set_db_url("mysql://spawned".to_string());
+
+        // Wait up to 1 second for the spawned task to complete and set the url
+        let res = tokio::time::timeout(std::time::Duration::from_secs(1), async {
+            for _ in 0..20 {
+                let cur = gs.async_get_db_url().await;
+                if cur == "mysql://spawned" {
+                    return true;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            }
+            false
+        })
+        .await
+        .expect("timeout waiting for spawn to set db_url");
+
+        assert!(res, "set_db_url spawn did not set the db_url in time");
+    }
 }
