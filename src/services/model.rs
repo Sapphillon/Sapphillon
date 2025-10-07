@@ -65,8 +65,7 @@ impl MyModelService {
             .map_err(Self::map_db_error)?
             .ok_or_else(|| {
                 Status::not_found(format!(
-                    "provider '{}' not found for model operation",
-                    provider_name
+                    "provider '{provider_name}' not found for model operation"
                 ))
             })?;
         Ok(())
