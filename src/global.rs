@@ -50,6 +50,19 @@ impl GlobalState {
             }
         }
     }
+    
+    pub async fn wait_db_initialized(&self) {
+        loop {
+            {
+                let data = self.data.read().await;
+                if data.db_initialized {
+                    break;
+                }
+            }
+            // Sleep briefly to avoid busy waiting
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        }
+    }
 }
 
 impl std::fmt::Display for GlobalState {
