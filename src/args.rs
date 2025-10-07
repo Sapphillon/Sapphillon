@@ -26,6 +26,10 @@ pub struct Args {
     #[arg(long, value_enum, default_value_t = LogLevel::Info)]
     pub loglevel: LogLevel,
 
+    /// SQLite Database URL
+    #[arg(long, default_value_t = String::from("sqlite:memory:"))]
+    pub db_url: String,
+
     #[command(subcommand)]
     pub command: Command,
 }

@@ -30,7 +30,7 @@ mod sysconfig;
 
 use anyhow::Result;
 use clap::Parser;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 
 use args::{Args, Command};
 use server::start_server;
@@ -61,6 +61,12 @@ async fn main() -> Result<()> {
     // End Initialization
 
     debug!("GLOBAL_STATE: {GLOBAL_STATE}");
+
+    // Check db_url
+    info!("Using database URL: {}", args.db_url);
+    if args.db_url == "sqlite:memory:" {
+        warn!("Using in-memory SQLite database. Data will not be persisted.");
+    }
 
     match args.command {
         Command::Start => {
