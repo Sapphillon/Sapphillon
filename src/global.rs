@@ -52,3 +52,46 @@ impl std::fmt::Display for GlobalState {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_unlocked_shows_defaults() {
+        let gs = GlobalState::new();
+        let s = format!("{gs}");
+        assert!(s.contains("db_initialized: false"), "display should show db_initialized: false, got: {s}");
+        assert!(s.contains("db_url: ''"), "display should show empty db_url, got: {s}");
+    }
+
+    #[test]
+    fn display_locked_shows_locked() {
+        let gs = GlobalState::new();
+
+        // Acquire an exclusive write lock so try_read inside Display fails
+        let write_guard = gs.data.try_write().expect("should acquire write lock");
+    let s = format!("{gs}");
+    assert!(s.contains("<locked>"), "display should indicate locked state, got: {s}");
+
+        // drop the guard to release lock (explicit for clarity)
+        drop(write_guard);
+    }
+
+    #[test]
+    fn mutate_state_and_display() {
+        let gs = GlobalState::new();
+
+        {
+            // Acquire write lock and change fields
+            let mut w = gs.data.try_write().expect("should acquire write lock");
+            w.db_initialized = true;
+            w.db_url = "sqlite://:memory:".to_string();
+        }
+
+    let s = format!("{gs}");
+    assert!(s.contains("db_initialized: true"), "display should show db_initialized: true, got: {s}");
+    assert!(s.contains("sqlite://:memory:"), "display should show updated db_url, got: {s}");
+    }
+}
+
