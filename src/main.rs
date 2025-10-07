@@ -43,12 +43,14 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     // Initialize tracing/logging once (combine settings to avoid double init)
+    let log_level_tracing: tracing::Level = args.loglevel.clone().into();
+
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::new(
             args.loglevel.to_string(),
         ))
         // keep ORM and debug-related verbosity and useful thread info
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(log_level_tracing)
         .with_thread_ids(true)
         .with_thread_names(true)
         .init();
@@ -71,7 +73,6 @@ async fn main() -> Result<()> {
     match args.command {
         Command::Start => {
             // Start the gRPC server and demonstrate client communication
-            info!("Starting gRPC server...");
             debug!("Log level set to: {:?}", args.loglevel);
 
             // Start server in a background task
