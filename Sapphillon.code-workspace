@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Saphillon-Core"
+		},
+		{
+			"path": "../Sapphillon_API"
+		}
+	],
+	"settings": {}
+}
