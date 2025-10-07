@@ -27,7 +27,7 @@ pub struct Args {
     pub loglevel: LogLevel,
 
     /// SQLite Database URL
-    #[arg(long, default_value_t = String::from("sqlite:memory:"))]
+    #[arg(long, default_value_t = String::from("sqlite::memory:"))]
     pub db_url: String,
 
     #[command(subcommand)]
