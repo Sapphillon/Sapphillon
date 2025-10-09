@@ -16,14 +16,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Service root module
+pub use sea_orm_migration::prelude::*;
 
-mod model;
-mod provider;
-mod version;
-mod workflow;
+mod m20250908_000001_create_providers_and_models;
 
-pub use model::*;
-pub use provider::*;
-pub use version::*;
-pub use workflow::*;
+pub struct Migrator;
+
+#[async_trait::async_trait]
+impl MigratorTrait for Migrator {
+    fn migrations() -> Vec<Box<dyn MigrationTrait>> {
+        vec![Box::new(
+            m20250908_000001_create_providers_and_models::Migration,
+        )]
+    }
+}

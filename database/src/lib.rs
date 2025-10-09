@@ -16,14 +16,5 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Service root module
-
-mod model;
-mod provider;
-mod version;
-mod workflow;
-
-pub use model::*;
-pub use provider::*;
-pub use version::*;
-pub use workflow::*;
+pub mod model;
+pub mod provider;

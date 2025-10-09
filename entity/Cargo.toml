@@ -1,0 +1,14 @@
+[package]
+name = "entity"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license-file.workspace = true
+readme.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[dependencies]
+sapphillon_core.workspace = true
+sea-orm.workspace = true
+anyhow.workspace = true

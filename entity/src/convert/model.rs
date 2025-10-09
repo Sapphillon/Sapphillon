@@ -16,14 +16,27 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Service root module
+use crate::entity::model::Model as EntityModel;
+use sapphillon_core::proto::sapphillon::ai::v1::Models as ProtoModel;
 
-mod model;
-mod provider;
-mod version;
-mod workflow;
+impl From<EntityModel> for ProtoModel {
+    fn from(entity: EntityModel) -> Self {
+        ProtoModel {
+            name: entity.name,
+            display_name: entity.display_name,
+            description: entity.description,
+            provider_name: entity.provider_name,
+        }
+    }
+}
 
-pub use model::*;
-pub use provider::*;
-pub use version::*;
-pub use workflow::*;
+impl From<ProtoModel> for EntityModel {
+    fn from(proto: ProtoModel) -> Self {
+        EntityModel {
+            name: proto.name,
+            display_name: proto.display_name,
+            description: proto.description,
+            provider_name: proto.provider_name,
+        }
+    }
+}

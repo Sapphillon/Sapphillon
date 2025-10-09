@@ -16,14 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// Service root module
+pub mod convert;
+pub mod entity;
 
-mod model;
-mod provider;
-mod version;
-mod workflow;
+pub use entity::provider;
 
-pub use model::*;
-pub use provider::*;
-pub use version::*;
-pub use workflow::*;
+#[allow(unused)]
+use convert::*;

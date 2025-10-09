@@ -26,6 +26,10 @@ pub struct Args {
     #[arg(long, value_enum, default_value_t = LogLevel::Info)]
     pub loglevel: LogLevel,
 
+    /// SQLite Database URL
+    #[arg(long, default_value_t = String::from("sqlite::memory:"))]
+    pub db_url: String,
+
     #[command(subcommand)]
     pub command: Command,
 }
@@ -47,6 +51,18 @@ impl From<LogLevel> for LevelFilter {
             LogLevel::Info => LevelFilter::Info,
             LogLevel::Warn => LevelFilter::Warn,
             LogLevel::Error => LevelFilter::Error,
+        }
+    }
+}
+
+impl From<LogLevel> for tracing::Level {
+    fn from(level: LogLevel) -> Self {
+        match level {
+            LogLevel::Trace => tracing::Level::TRACE,
+            LogLevel::Debug => tracing::Level::DEBUG,
+            LogLevel::Info => tracing::Level::INFO,
+            LogLevel::Warn => tracing::Level::WARN,
+            LogLevel::Error => tracing::Level::ERROR,
         }
     }
 }
