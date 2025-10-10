@@ -9,6 +9,93 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
+                    .table(PluginPackage::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(PluginPackage::PackageId)
+                            .string()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(string(PluginPackage::PackageName))
+                    .col(string(PluginPackage::PackageVersion))
+                    .col(ColumnDef::new(PluginPackage::Description).string().null())
+                    .col(
+                        ColumnDef::new(PluginPackage::PluginStoreUrl)
+                            .string()
+                            .null(),
+                    )
+                    .col(
+                        ColumnDef::new(PluginPackage::InternalPlugin)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(PluginPackage::Verified)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(PluginPackage::Deprecated)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .col(
+                        ColumnDef::new(PluginPackage::InstalledAt)
+                            .timestamp()
+                            .null(),
+                    )
+                    .col(ColumnDef::new(PluginPackage::UpdatedAt).timestamp().null())
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(PluginFunction::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(PluginFunction::FunctionId)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(PluginFunction::PackageId)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(string(PluginFunction::FunctionName))
+                    .col(ColumnDef::new(PluginFunction::Description).string().null())
+                    .col(
+                        ColumnDef::new(PluginFunction::PermissionsJson)
+                            .text()
+                            .null(),
+                    )
+                    .col(ColumnDef::new(PluginFunction::Arguments).text().null())
+                    .col(ColumnDef::new(PluginFunction::Returns).text().null())
+                    .primary_key(
+                        Index::create()
+                            .col(PluginFunction::PackageId)
+                            .col(PluginFunction::FunctionId),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_plugin_function_package")
+                            .from(PluginFunction::Table, PluginFunction::PackageId)
+                            .to(PluginPackage::Table, PluginPackage::PackageId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
                     .table(Provider::Table)
                     .if_not_exists()
                     .col(
@@ -56,6 +143,14 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
+            .drop_table(Table::drop().table(PluginFunction::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(PluginPackage::Table).to_owned())
+            .await?;
+
+        manager
             .drop_table(Table::drop().table(Provider::Table).to_owned())
             .await
     }
@@ -77,4 +172,31 @@ enum Model {
     DisplayName,
     Description,
     ProviderName,
+}
+
+#[derive(DeriveIden)]
+enum PluginPackage {
+    Table,
+    PackageId,
+    PackageName,
+    PackageVersion,
+    Description,
+    PluginStoreUrl,
+    InternalPlugin,
+    Verified,
+    Deprecated,
+    InstalledAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+enum PluginFunction {
+    Table,
+    PackageId,
+    FunctionId,
+    FunctionName,
+    Description,
+    PermissionsJson,
+    Arguments,
+    Returns,
 }
