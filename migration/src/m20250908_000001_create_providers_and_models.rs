@@ -71,7 +71,6 @@ impl MigrationTrait for Migration {
                     .col(string(PluginFunction::FunctionName))
                     .col(ColumnDef::new(PluginFunction::Description).string().null())
                     // Separate ID with colons (SQLite does not support for array)
-                    .col(ColumnDef::new(PluginFunction::PermissionId).text().null())
                     .col(ColumnDef::new(PluginFunction::Arguments).text().null())
                     .col(ColumnDef::new(PluginFunction::Returns).text().null())
                     .primary_key(
@@ -93,20 +92,55 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(Permission::Table)
+                    .table(PluginFunctionPermission::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(Permission::Id)
+                        ColumnDef::new(PluginFunctionPermission::Id)
                             .string()
                             .not_null()
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(Permission::DisplayName).string().null())
-                    .col(ColumnDef::new(Permission::Description).string().null())
-                    .col(ColumnDef::new(Permission::Type).integer().not_null())
-                    .col(ColumnDef::new(Permission::ResourceJson).text().null())
-                    .col(ColumnDef::new(Permission::Level).integer().null())
+                    .col(
+                        ColumnDef::new(PluginFunctionPermission::PluginFunctionId)
+                            .string()
+                            .not_null(),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_plugin_function_permission_function")
+                            .from(
+                                PluginFunctionPermission::Table,
+                                PluginFunctionPermission::PluginFunctionId,
+                            )
+                            .to(PluginFunction::Table, PluginFunction::FunctionId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .col(
+                        ColumnDef::new(PluginFunctionPermission::DisplayName)
+                            .string()
+                            .null(),
+                    )
+                    .col(
+                        ColumnDef::new(PluginFunctionPermission::Description)
+                            .string()
+                            .null(),
+                    )
+                    .col(
+                        ColumnDef::new(PluginFunctionPermission::Type)
+                            .integer()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(PluginFunctionPermission::ResourceJson)
+                            .text()
+                            .null(),
+                    )
+                    .col(
+                        ColumnDef::new(PluginFunctionPermission::Level)
+                            .integer()
+                            .null(),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -165,7 +199,11 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
-            .drop_table(Table::drop().table(Permission::Table).to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(PluginFunctionPermission::Table)
+                    .to_owned(),
+            )
             .await?;
 
         manager
@@ -218,15 +256,15 @@ enum PluginFunction {
     FunctionId,
     FunctionName,
     Description,
-    PermissionId,
     Arguments,
     Returns,
 }
 
 #[derive(DeriveIden)]
-enum Permission {
+enum PluginFunctionPermission {
     Table,
     Id,
+    PluginFunctionId,
     DisplayName,
     Description,
     Type,
