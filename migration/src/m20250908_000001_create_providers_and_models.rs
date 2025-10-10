@@ -96,6 +96,31 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
+                    .table(Permission::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(Permission::Id)
+                            .string()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(Permission::DisplayName).string().null())
+                    .col(ColumnDef::new(Permission::Description).string().null())
+                    .col(
+                        ColumnDef::new(Permission::Type)
+                            .integer()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(Permission::ResourceJson).text().null())
+                    .col(ColumnDef::new(Permission::Level).integer().null())
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
                     .table(Provider::Table)
                     .if_not_exists()
                     .col(
@@ -144,6 +169,10 @@ impl MigrationTrait for Migration {
 
         manager
             .drop_table(Table::drop().table(PluginFunction::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(Permission::Table).to_owned())
             .await?;
 
         manager
@@ -196,7 +225,18 @@ enum PluginFunction {
     FunctionId,
     FunctionName,
     Description,
-    PermissionsJson,
+    PermissionId,
     Arguments,
     Returns,
+}
+
+#[derive(DeriveIden)]
+enum Permission {
+    Table,
+    Id,
+    DisplayName,
+    Description,
+    Type,
+    ResourceJson,
+    Level,
 }
