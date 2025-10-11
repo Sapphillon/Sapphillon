@@ -148,6 +148,32 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
+                    .table(Permission::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(Permission::Id)
+                            .integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(Permission::PluginFunctionId)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(Permission::DisplayName).string().null())
+                    .col(ColumnDef::new(Permission::Description).string().null())
+                    .col(ColumnDef::new(Permission::Type).integer().not_null())
+                    .col(ColumnDef::new(Permission::ResourceJson).text().null())
+                    .col(ColumnDef::new(Permission::Level).integer().null())
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
                     .table(Provider::Table)
                     .if_not_exists()
                     .col(
@@ -186,16 +212,292 @@ impl MigrationTrait for Migration {
                     )
                     .to_owned(),
             )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(Workflow::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(Workflow::Id)
+                            .string()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(string(Workflow::DisplayName))
+                    .col(ColumnDef::new(Workflow::Description).string().null())
+                    .col(
+                        ColumnDef::new(Workflow::WorkflowLanguage)
+                            .integer()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(Workflow::CreatedAt).timestamp().null())
+                    .col(ColumnDef::new(Workflow::UpdatedAt).timestamp().null())
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(WorkflowCode::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(WorkflowCode::Id)
+                            .string()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(WorkflowCode::WorkflowId).string().not_null())
+                    .col(
+                        ColumnDef::new(WorkflowCode::CodeRevision)
+                            .integer()
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(WorkflowCode::Code).text().not_null())
+                    .col(ColumnDef::new(WorkflowCode::Language).integer().not_null())
+                    .col(ColumnDef::new(WorkflowCode::CreatedAt).timestamp().null())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_workflow_code_workflow")
+                            .from(WorkflowCode::Table, WorkflowCode::WorkflowId)
+                            .to(Workflow::Table, Workflow::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(WorkflowCodeResult::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(WorkflowCodeResult::Id)
+                            .string()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodeResult::WorkflowCodeId)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodeResult::DisplayName)
+                            .string()
+                            .null(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodeResult::Description)
+                            .string()
+                            .null(),
+                    )
+                    .col(ColumnDef::new(WorkflowCodeResult::Result).text().null())
+                    .col(ColumnDef::new(WorkflowCodeResult::RanAt).timestamp().null())
+                    .col(
+                        ColumnDef::new(WorkflowCodeResult::ResultType)
+                            .integer()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodeResult::ExitCode)
+                            .integer()
+                            .null(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodeResult::WorkflowResultRevision)
+                            .integer()
+                            .not_null(),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_workflow_code_result_code")
+                            .from(
+                                WorkflowCodeResult::Table,
+                                WorkflowCodeResult::WorkflowCodeId,
+                            )
+                            .to(WorkflowCode::Table, WorkflowCode::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(WorkflowCodePluginPackage::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(WorkflowCodePluginPackage::Id)
+                            .integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodePluginPackage::WorkflowCodeId)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodePluginPackage::PluginPackageId)
+                            .string()
+                            .not_null(),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_workflow_code_plugin_package_code")
+                            .from(
+                                WorkflowCodePluginPackage::Table,
+                                WorkflowCodePluginPackage::WorkflowCodeId,
+                            )
+                            .to(WorkflowCode::Table, WorkflowCode::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_workflow_code_plugin_package_package")
+                            .from(
+                                WorkflowCodePluginPackage::Table,
+                                WorkflowCodePluginPackage::PluginPackageId,
+                            )
+                            .to(PluginPackage::Table, PluginPackage::PackageId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(WorkflowCodePluginFunction::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(WorkflowCodePluginFunction::Id)
+                            .integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodePluginFunction::WorkflowCodeId)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodePluginFunction::PluginFunctionId)
+                            .string()
+                            .not_null(),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_workflow_code_plugin_function_code")
+                            .from(
+                                WorkflowCodePluginFunction::Table,
+                                WorkflowCodePluginFunction::WorkflowCodeId,
+                            )
+                            .to(WorkflowCode::Table, WorkflowCode::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(WorkflowCodeAllowedPermission::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(WorkflowCodeAllowedPermission::Id)
+                            .integer()
+                            .not_null()
+                            .auto_increment()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodeAllowedPermission::WorkflowCodeId)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WorkflowCodeAllowedPermission::PermissionId)
+                            .integer()
+                            .not_null(),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_workflow_code_allowed_permission_code")
+                            .from(
+                                WorkflowCodeAllowedPermission::Table,
+                                WorkflowCodeAllowedPermission::WorkflowCodeId,
+                            )
+                            .to(WorkflowCode::Table, WorkflowCode::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_workflow_code_allowed_permission_permission")
+                            .from(
+                                WorkflowCodeAllowedPermission::Table,
+                                WorkflowCodeAllowedPermission::PermissionId,
+                            )
+                            .to(Permission::Table, Permission::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Model::Table).to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(WorkflowCodeAllowedPermission::Table)
+                    .to_owned(),
+            )
             .await?;
 
         manager
-            .drop_table(Table::drop().table(PluginFunction::Table).to_owned())
+            .drop_table(
+                Table::drop()
+                    .table(WorkflowCodePluginFunction::Table)
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .drop_table(
+                Table::drop()
+                    .table(WorkflowCodePluginPackage::Table)
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(WorkflowCodeResult::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(WorkflowCode::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(Workflow::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(Permission::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(Model::Table).to_owned())
             .await?;
 
         manager
@@ -204,6 +506,10 @@ impl MigrationTrait for Migration {
                     .table(PluginFunctionPermission::Table)
                     .to_owned(),
             )
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(PluginFunction::Table).to_owned())
             .await?;
 
         manager
@@ -233,6 +539,18 @@ enum Model {
     DisplayName,
     Description,
     ProviderName,
+}
+
+#[derive(DeriveIden)]
+#[allow(clippy::enum_variant_names)]
+enum Workflow {
+    Table,
+    Id,
+    DisplayName,
+    Description,
+    WorkflowLanguage,
+    CreatedAt,
+    UpdatedAt,
 }
 
 // ------ Plugin Related Tables -------
@@ -268,7 +586,11 @@ enum PluginFunctionPermission {
     Table,
     Id,
     PluginFunctionId,
-    PermissionId,
+    DisplayName,
+    Description,
+    Type,
+    ResourceJson,
+    Level,
 }
 
 // Permission Related Table
@@ -289,6 +611,7 @@ enum Permission {
 enum WorkflowCode {
     Table,
     Id,
+    WorkflowId,
     CodeRevision,
     Code,
     Language,
