@@ -78,6 +78,12 @@ impl MigrationTrait for Migration {
                             .col(PluginFunction::PackageId)
                             .col(PluginFunction::FunctionId),
                     )
+                    .index(
+                        Index::create()
+                            .name("idx_plugin_function_function_id_unique")
+                            .col(PluginFunction::FunctionId)
+                            .unique(),
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_plugin_function_package")
@@ -167,6 +173,13 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Permission::Type).integer().not_null())
                     .col(ColumnDef::new(Permission::ResourceJson).text().null())
                     .col(ColumnDef::new(Permission::Level).integer().null())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_permission_plugin_function")
+                            .from(Permission::Table, Permission::PluginFunctionId)
+                            .to(PluginFunction::Table, PluginFunction::FunctionId)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
                     .to_owned(),
             )
             .await?;
@@ -399,6 +412,16 @@ impl MigrationTrait for Migration {
                                 WorkflowCodePluginFunction::WorkflowCodeId,
                             )
                             .to(WorkflowCode::Table, WorkflowCode::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_workflow_code_plugin_function_function")
+                            .from(
+                                WorkflowCodePluginFunction::Table,
+                                WorkflowCodePluginFunction::PluginFunctionId,
+                            )
+                            .to(PluginFunction::Table, PluginFunction::FunctionId)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
