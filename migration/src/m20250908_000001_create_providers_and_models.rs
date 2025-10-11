@@ -272,53 +272,50 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
-                    .table(WorkflowCodeResult::Table)
+                    .table(WorkflowResult::Table)
                     .if_not_exists()
                     .col(
-                        ColumnDef::new(WorkflowCodeResult::Id)
+                        ColumnDef::new(WorkflowResult::Id)
                             .string()
                             .not_null()
                             .primary_key(),
                     )
                     .col(
-                        ColumnDef::new(WorkflowCodeResult::WorkflowCodeId)
+                        ColumnDef::new(WorkflowResult::WorkflowId)
                             .string()
                             .not_null(),
                     )
                     .col(
-                        ColumnDef::new(WorkflowCodeResult::DisplayName)
+                        ColumnDef::new(WorkflowResult::WorkflowCodeId)
                             .string()
-                            .null(),
+                            .not_null(),
                     )
+                    .col(ColumnDef::new(WorkflowResult::DisplayName).string().null())
+                    .col(ColumnDef::new(WorkflowResult::Description).string().null())
+                    .col(ColumnDef::new(WorkflowResult::Result).text().null())
+                    .col(ColumnDef::new(WorkflowResult::RanAt).timestamp().null())
                     .col(
-                        ColumnDef::new(WorkflowCodeResult::Description)
-                            .string()
-                            .null(),
-                    )
-                    .col(ColumnDef::new(WorkflowCodeResult::Result).text().null())
-                    .col(ColumnDef::new(WorkflowCodeResult::RanAt).timestamp().null())
-                    .col(
-                        ColumnDef::new(WorkflowCodeResult::ResultType)
+                        ColumnDef::new(WorkflowResult::ResultType)
                             .integer()
                             .not_null(),
                     )
+                    .col(ColumnDef::new(WorkflowResult::ExitCode).integer().null())
                     .col(
-                        ColumnDef::new(WorkflowCodeResult::ExitCode)
-                            .integer()
-                            .null(),
-                    )
-                    .col(
-                        ColumnDef::new(WorkflowCodeResult::WorkflowResultRevision)
+                        ColumnDef::new(WorkflowResult::WorkflowResultRevision)
                             .integer()
                             .not_null(),
                     )
                     .foreign_key(
                         ForeignKey::create()
-                            .name("fk_workflow_code_result_code")
-                            .from(
-                                WorkflowCodeResult::Table,
-                                WorkflowCodeResult::WorkflowCodeId,
-                            )
+                            .name("fk_workflow_result_workflow")
+                            .from(WorkflowResult::Table, WorkflowResult::WorkflowId)
+                            .to(Workflow::Table, Workflow::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_workflow_result_code")
+                            .from(WorkflowResult::Table, WorkflowResult::WorkflowCodeId)
                             .to(WorkflowCode::Table, WorkflowCode::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
@@ -481,7 +478,7 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
-            .drop_table(Table::drop().table(WorkflowCodeResult::Table).to_owned())
+            .drop_table(Table::drop().table(WorkflowResult::Table).to_owned())
             .await?;
 
         manager
@@ -619,9 +616,11 @@ enum WorkflowCode {
 }
 
 #[derive(DeriveIden)]
-enum WorkflowCodeResult {
+#[allow(clippy::enum_variant_names)]
+enum WorkflowResult {
     Table,
     Id,
+    WorkflowId,
     WorkflowCodeId,
     DisplayName,
     Description,
