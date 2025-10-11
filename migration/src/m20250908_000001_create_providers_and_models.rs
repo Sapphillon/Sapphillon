@@ -216,6 +216,7 @@ impl MigrationTrait for Migration {
     }
 }
 
+// ------ AI Related Tables -------
 #[derive(DeriveIden)]
 enum Provider {
     Table,
@@ -233,6 +234,8 @@ enum Model {
     Description,
     ProviderName,
 }
+
+// ------ Plugin Related Tables -------
 
 #[derive(DeriveIden)]
 enum PluginPackage {
@@ -265,9 +268,67 @@ enum PluginFunctionPermission {
     Table,
     Id,
     PluginFunctionId,
+    PermissionId,
+}
+
+// Permission Related Table
+#[derive(DeriveIden)]
+enum Permission {
+    Table,
+    Id,
+    PluginFunctionId,
     DisplayName,
     Description,
     Type,
     ResourceJson,
     Level,
+}
+
+// Workflow Code Related Tables
+#[derive(DeriveIden)]
+enum WorkflowCode {
+    Table,
+    Id,
+    CodeRevision,
+    Code,
+    Language,
+    CreatedAt,
+}
+
+#[derive(DeriveIden)]
+enum WorkflowCodeResult {
+    Table,
+    Id,
+    WorkflowCodeId,
+    DisplayName,
+    Description,
+    Result,
+    RanAt,
+    ResultType,
+    ExitCode,
+    WorkflowResultRevision,
+}
+
+#[derive(DeriveIden)]
+enum WorkflowCodePluginPackage {
+    Table,
+    Id,
+    WorkflowCodeId,
+    PluginPackageId,
+}
+
+#[derive(DeriveIden)]
+enum WorkflowCodePluginFunction {
+    Table,
+    Id,
+    WorkflowCodeId,
+    PluginFunctionId,
+}
+
+#[derive(DeriveIden)]
+enum WorkflowCodeAllowedPermission {
+    Table,
+    Id,
+    WorkflowCodeId,
+    PermissionId,
 }
