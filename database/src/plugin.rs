@@ -18,3 +18,4 @@
 
 pub mod plugin_function_crud;
 pub mod plugin_package_crud;
+pub mod plugin_function_permission_crud;
