@@ -960,6 +960,7 @@ dependencies = [
  "sapphillon_core",
  "sea-orm",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
