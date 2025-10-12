@@ -34,4 +34,17 @@ impl Related<super::plugin_function::Entity> for Entity {
     }
 }
 
+impl Related<super::plugin_package::Entity> for Entity {
+    fn to() -> RelationDef {
+        super::plugin_function::Relation::PluginPackage.def()
+    }
+    fn via() -> Option<RelationDef> {
+        Some(
+            super::plugin_function::Relation::PluginFunctionPermission
+                .def()
+                .rev(),
+        )
+    }
+}
+
 impl ActiveModelBehavior for ActiveModel {}

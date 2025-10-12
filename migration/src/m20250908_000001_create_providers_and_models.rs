@@ -123,29 +123,19 @@ impl MigrationTrait for Migration {
                             .on_delete(ForeignKeyAction::Cascade),
                     )
                     .col(
-                        ColumnDef::new(PluginFunctionPermission::DisplayName)
+                        ColumnDef::new(PluginFunctionPermission::PermissionId)
                             .string()
-                            .null(),
-                    )
-                    .col(
-                        ColumnDef::new(PluginFunctionPermission::Description)
-                            .string()
-                            .null(),
-                    )
-                    .col(
-                        ColumnDef::new(PluginFunctionPermission::Type)
-                            .integer()
                             .not_null(),
                     )
-                    .col(
-                        ColumnDef::new(PluginFunctionPermission::ResourceJson)
-                            .text()
-                            .null(),
-                    )
-                    .col(
-                        ColumnDef::new(PluginFunctionPermission::Level)
-                            .integer()
-                            .null(),
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk_plugin_function_permission_permission")
+                            .from(
+                                PluginFunctionPermission::Table,
+                                PluginFunctionPermission::PermissionId,
+                            )
+                            .to(Permission::Table, Permission::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )
@@ -606,11 +596,7 @@ enum PluginFunctionPermission {
     Table,
     Id,
     PluginFunctionId,
-    DisplayName,
-    Description,
-    Type,
-    ResourceJson,
-    Level,
+    PermissionId
 }
 
 // Permission Related Table
