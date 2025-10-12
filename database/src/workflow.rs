@@ -21,14 +21,14 @@ pub mod workflow_code_crud;
 pub mod workflow_crud;
 pub mod workflow_result_crud;
 
-use entity::entity::plugin_function;
 use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, EntityTrait};
 use sapphillon_core::proto::sapphillon::v1::{Workflow, WorkflowCode};
 
 
 use uuid::Uuid;
 
-pub async fn create_workflow_code(
+#[allow(dead_code)]
+pub(crate) async fn create_workflow_code(
     db: &DatabaseConnection,
     code: String,
     workflow_id: i32,
@@ -97,4 +97,153 @@ pub async fn create_workflow(
     workflow_code: String,
 ) -> Result<Workflow, DbErr> {
     todo!();
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sea_orm::{Database, DatabaseConnection, DbBackend, Statement, ConnectionTrait, DbErr, ColumnTrait, QueryFilter};
+
+    async fn setup_db() -> Result<DatabaseConnection, DbErr> {
+        let db = Database::connect("sqlite::memory:").await?;
+
+        // workflow table (referenced)
+        let sql_wf = r#"
+            CREATE TABLE workflow (
+                id TEXT PRIMARY KEY,
+                display_name TEXT NOT NULL,
+                description TEXT,
+                workflow_language INTEGER NOT NULL,
+                created_at TEXT,
+                updated_at TEXT
+            )
+        "#;
+        db.execute(Statement::from_string(DbBackend::Sqlite, sql_wf.to_string()))
+            .await?;
+
+        // workflow_code table
+        let sql_wc = r#"
+            CREATE TABLE workflow_code (
+                id TEXT PRIMARY KEY,
+                workflow_id TEXT NOT NULL,
+                code_revision INTEGER NOT NULL,
+                code TEXT NOT NULL,
+                language INTEGER NOT NULL,
+                created_at TEXT
+            )
+        "#;
+        db.execute(Statement::from_string(DbBackend::Sqlite, sql_wc.to_string()))
+            .await?;
+
+        // plugin_package table
+        let sql_pp = r#"
+            CREATE TABLE plugin_package (
+                package_id TEXT PRIMARY KEY,
+                package_name TEXT NOT NULL,
+                package_version TEXT NOT NULL,
+                description TEXT,
+                plugin_store_url TEXT,
+                internal_plugin BOOLEAN NOT NULL,
+                verified BOOLEAN NOT NULL,
+                deprecated BOOLEAN NOT NULL,
+                installed_at TEXT,
+                updated_at TEXT
+            )
+        "#;
+        db.execute(Statement::from_string(DbBackend::Sqlite, sql_pp.to_string()))
+            .await?;
+
+        // plugin_function table
+        let sql_pf = r#"
+            CREATE TABLE plugin_function (
+                function_id TEXT PRIMARY KEY,
+                package_id TEXT NOT NULL,
+                function_name TEXT NOT NULL,
+                description TEXT,
+                arguments TEXT,
+                returns TEXT
+            )
+        "#;
+        db.execute(Statement::from_string(DbBackend::Sqlite, sql_pf.to_string()))
+            .await?;
+
+        // workflow_code_plugin_function table
+        let sql_wcpf = r#"
+            CREATE TABLE workflow_code_plugin_function (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workflow_code_id TEXT NOT NULL,
+                plugin_function_id TEXT NOT NULL
+            )
+        "#;
+        db.execute(Statement::from_string(DbBackend::Sqlite, sql_wcpf.to_string()))
+            .await?;
+
+        // workflow_code_plugin_package table
+        let sql_wcpp = r#"
+            CREATE TABLE workflow_code_plugin_package (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workflow_code_id TEXT NOT NULL,
+                plugin_package_id TEXT NOT NULL
+            )
+        "#;
+        db.execute(Statement::from_string(DbBackend::Sqlite, sql_wcpp.to_string()))
+            .await?;
+
+        Ok(db)
+    }
+
+    #[tokio::test]
+    async fn test_create_workflow_code_inserts_plugins() -> Result<(), DbErr> {
+        let db = setup_db().await?;
+
+        // Insert referenced workflow
+        let wf_id = "wf1".to_string();
+        db.execute(Statement::from_string(
+            DbBackend::Sqlite,
+            format!("INSERT INTO workflow (id, display_name, workflow_language) VALUES ('{}','WF', 0)", wf_id),
+        ))
+        .await?;
+
+        // Insert plugin package and function
+        let pkg_id = "pkg1".to_string();
+        db.execute(Statement::from_string(
+            DbBackend::Sqlite,
+            format!("INSERT INTO plugin_package (package_id, package_name, package_version, internal_plugin, verified, deprecated) VALUES ('{}','P', 'v1', 0, 0, 0)", pkg_id),
+        ))
+        .await?;
+
+        let func_id = "func1".to_string();
+        db.execute(Statement::from_string(
+            DbBackend::Sqlite,
+            format!("INSERT INTO plugin_function (function_id, package_id, function_name) VALUES ('{}','{}','f')", func_id, pkg_id),
+        ))
+        .await?;
+
+        // Call the function under test
+        let code = "print('hi')".to_string();
+        let proto = create_workflow_code(&db, code, 1, vec![func_id.clone()], vec![pkg_id.clone()]).await?;
+
+        // Verify workflow_code row exists
+        let found_wc = entity::entity::workflow_code::Entity::find_by_id(proto.id.clone())
+            .one(&db)
+            .await?;
+        assert!(found_wc.is_some());
+
+        // Verify plugin function relation exists
+        let wcpf = entity::entity::workflow_code_plugin_function::Entity::find()
+            .filter(entity::entity::workflow_code_plugin_function::Column::PluginFunctionId.eq(func_id.clone()))
+            .all(&db)
+            .await?;
+        assert!(!wcpf.is_empty());
+
+        // Verify plugin package relation exists
+        let wcpp = entity::entity::workflow_code_plugin_package::Entity::find()
+            .filter(entity::entity::workflow_code_plugin_package::Column::PluginPackageId.eq(pkg_id.clone()))
+            .all(&db)
+            .await?;
+        assert!(!wcpp.is_empty());
+
+        Ok(())
+    }
 }
