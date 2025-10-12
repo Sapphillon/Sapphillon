@@ -126,9 +126,7 @@ pub(crate) async fn delete_workflow_code(db: &DatabaseConnection, id: &str) -> R
 mod tests {
     use super::*;
     use entity::entity::workflow as entity_wf;
-    use sea_orm::{
-        ConnectionTrait, Database, DatabaseConnection, DbBackend, EntityTrait, Statement,
-    };
+    use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, Statement};
 
     async fn setup_db() -> Result<DatabaseConnection, DbErr> {
         let db = Database::connect("sqlite::memory:").await?;

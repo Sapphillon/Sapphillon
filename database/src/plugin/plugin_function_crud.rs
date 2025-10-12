@@ -162,9 +162,7 @@ pub(crate) async fn delete_plugin_function(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sea_orm::{
-        ConnectionTrait, Database, DatabaseConnection, DbBackend, EntityTrait, Statement,
-    };
+    use sea_orm::{ConnectionTrait, Database, DatabaseConnection, DbBackend, Statement};
 
     async fn setup_db() -> Result<DatabaseConnection, DbErr> {
         let db = Database::connect("sqlite::memory:").await?;
