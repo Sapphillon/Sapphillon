@@ -17,3 +17,4 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 pub mod plugin_function_crud;
+pub mod plugin_package_crud;
