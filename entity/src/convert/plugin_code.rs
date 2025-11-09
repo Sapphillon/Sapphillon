@@ -207,7 +207,7 @@ pub fn permission_to_proto(entity: &EntityPermission) -> ProtoPermission {
     }
 }
 
-fn proto_string_to_option(value: &str) -> Option<String> {
+pub(crate) fn proto_string_to_option(value: &str) -> Option<String> {
     if value.is_empty() {
         None
     } else {
@@ -215,7 +215,7 @@ fn proto_string_to_option(value: &str) -> Option<String> {
     }
 }
 
-fn proto_timestamp_to_datetime(
+pub(crate) fn proto_timestamp_to_datetime(
     ts: &sapphillon_core::proto::google::protobuf::Timestamp,
 ) -> Option<DateTimeUtc> {
     let mut seconds = ts.seconds;
