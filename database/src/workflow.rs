@@ -136,6 +136,16 @@ pub async fn create_workflow(
     Ok(proto)
 }
 
+pub async fn get_workflow_by_id(
+    db: &DatabaseConnection,
+    workflow_id: &str,
+) -> Result<Option<entity::entity::workflow::Model>, DbErr> {
+    let workflow = entity::entity::workflow::Entity::find_by_id(workflow_id.to_string())
+        .one(db)
+        .await?;
+    Ok(workflow)
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -280,6 +290,38 @@ mod tests {
             .all(&db)
             .await?;
         assert!(!wcpp.is_empty());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_create_workflow_inserts_row_and_returns_proto() -> Result<(), DbErr> {
+        let db = setup_db().await?;
+
+        // Call create_workflow with a display name and description
+        let display_name = "My Workflow".to_string();
+        let description = Some("A test workflow".to_string());
+
+        let proto = create_workflow(&db, display_name.clone(), description.clone()).await?;
+
+        // Ensure a workflow row was inserted
+        let found = entity::entity::workflow::Entity::find_by_id(proto.id.clone())
+            .one(&db)
+            .await?;
+        assert!(found.is_some());
+        let model = found.unwrap();
+
+        // Check model fields match inputs
+        assert_eq!(model.display_name, display_name);
+        assert_eq!(model.description, description.clone());
+
+        // Check returned proto fields
+        assert_eq!(proto.display_name, display_name);
+        assert_eq!(proto.description, description.unwrap());
+
+        // created_at/updated_at should be present in the proto (mapping from chrono)
+        assert!(proto.created_at.is_some());
+        assert!(proto.updated_at.is_some());
 
         Ok(())
     }
