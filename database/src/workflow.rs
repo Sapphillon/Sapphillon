@@ -21,7 +21,7 @@ pub mod workflow_code_crud;
 pub mod workflow_crud;
 pub mod workflow_result_crud;
 
-use sea_orm::{ActiveValue::Set, DatabaseConnection, DbErr, EntityTrait};
+use sea_orm::{ActiveValue::Set, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, QuerySelect as _, RelationDef, RelationTrait, query};
 use sapphillon_core::proto::sapphillon::v1::{Workflow, WorkflowCode};
 
 
@@ -142,6 +142,24 @@ pub async fn get_workflow_by_id(
 ) -> Result<Option<entity::entity::workflow::Model>, DbErr> {
     let workflow = entity::entity::workflow::Entity::find_by_id(workflow_id.to_string())
         .one(db)
+        .await?;
+    
+    let workflow_code = entity::entity::workflow_code::Entity::find()
+        .filter(entity::entity::workflow_code::Column::WorkflowId.eq(workflow_id.to_string()))
+        .join(
+            sea_orm::JoinType::LeftJoin,
+            entity::entity::workflow_code::Relation::WorkflowCodePluginFunction.def(),
+        )
+        .join(
+            query::JoinType::LeftJoin,
+            entity::entity::workflow_code::Relation::WorkflowCodePluginPackage.def(),
+        )
+        .join(
+            query::JoinType::LeftJoin,
+            entity::entity::workflow_code::Relation::WorkflowResult.def(),
+        )
+
+        .all(db)
         .await?;
     Ok(workflow)
 }
