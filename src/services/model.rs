@@ -23,7 +23,6 @@ use sea_orm::{DatabaseConnection, DbErr};
 use tonic::{Request, Response, Status};
 
 use database::{model as model_db, provider as provider_db};
-use entity::entity::model as model_entity;
 use sapphillon_core::proto::google::rpc::{Code as RpcCode, Status as RpcStatus};
 use sapphillon_core::proto::sapphillon::ai::v1::model_service_server::ModelService;
 use sapphillon_core::proto::sapphillon::ai::v1::{
@@ -148,31 +147,26 @@ impl ModelService for MyModelService {
             ));
         }
 
-        self.ensure_provider_exists(incoming.provider_name.trim())
-            .await?;
+        let mut model = incoming;
+        let provider_name = model.provider_name.trim().to_string();
+        self.ensure_provider_exists(&provider_name).await?;
+        model.provider_name = provider_name;
 
-        let model_name = if incoming.name.trim().is_empty() {
+        let model_name = if model.name.trim().is_empty() {
             format!("models/{}", uuid::Uuid::new_v4())
         } else {
-            incoming.name.clone()
+            model.name.trim().to_string()
         };
+        model.name = model_name.clone();
 
-        let model = model_entity::Model {
-            name: model_name.clone(),
-            display_name: incoming.display_name,
-            description: incoming.description,
-            provider_name: incoming.provider_name,
-        };
-
-        model_db::create_model(&self.db, model.clone())
+        let stored = model_db::create_model(&self.db, model)
             .await
             .map_err(Self::map_db_error)?;
 
-        debug!("Created model record: {model_name}");
+        debug!("Created model record: {}", stored.name);
 
-        let model_proto: Models = model.into();
         let response = CreateModelResponse {
-            model: Some(Self::sanitize_model(model_proto)),
+            model: Some(Self::sanitize_model(stored)),
             status: Self::ok_status("model created"),
         };
 
@@ -202,9 +196,8 @@ impl ModelService for MyModelService {
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::not_found(format!("model '{}' not found", req.name)))?;
 
-        let model_proto: Models = model.into();
         let response = GetModelResponse {
-            model: Some(Self::sanitize_model(model_proto)),
+            model: Some(Self::sanitize_model(model)),
             status: Self::ok_status("model retrieved"),
         };
 
@@ -241,10 +234,7 @@ impl ModelService for MyModelService {
             .await
             .map_err(Self::map_db_error)?;
 
-        let models: Vec<Models> = models
-            .into_iter()
-            .map(|model| Self::sanitize_model(model.into()))
-            .collect();
+        let models: Vec<Models> = models.into_iter().map(Self::sanitize_model).collect();
 
         let response = ListModelsResponse {
             models,
@@ -311,7 +301,7 @@ impl ModelService for MyModelService {
             return Err(Status::invalid_argument("model.name must not be empty"));
         }
 
-        let mut existing = model_db::get_model(&self.db, &incoming.name)
+        let existing = model_db::get_model(&self.db, &incoming.name)
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::not_found(format!("model '{}' not found", incoming.name)))?;
@@ -319,44 +309,39 @@ impl ModelService for MyModelService {
         let mask_paths = req.update_mask.map(|mask| mask.paths).unwrap_or_default();
         let update_all = mask_paths.is_empty();
 
-        let desired: model_entity::Model = incoming.clone().into();
+        let mut desired = existing.clone();
 
         if update_all || mask_paths.iter().any(|path| path == "display_name") {
-            if desired.display_name.trim().is_empty() {
+            if incoming.display_name.trim().is_empty() {
                 return Err(Status::invalid_argument(
                     "model.display_name must not be empty",
                 ));
             }
-            existing.display_name = desired.display_name.clone();
+            desired.display_name = incoming.display_name.clone();
         }
 
         if update_all || mask_paths.iter().any(|path| path == "description") {
-            existing.description = desired.description.clone();
+            desired.description = incoming.description.clone();
         }
 
         if update_all || mask_paths.iter().any(|path| path == "provider_name") {
-            if desired.provider_name.trim().is_empty() {
+            if incoming.provider_name.trim().is_empty() {
                 return Err(Status::invalid_argument(
                     "model.provider_name must not be empty",
                 ));
             }
-            self.ensure_provider_exists(desired.provider_name.trim())
-                .await?;
-            existing.provider_name = desired.provider_name.clone();
+            let provider_name = incoming.provider_name.trim().to_string();
+            self.ensure_provider_exists(&provider_name).await?;
+            desired.provider_name = provider_name;
         }
 
-        model_db::update_model(&self.db, existing.clone())
-            .await
-            .map_err(Self::map_db_error)?;
-
-        let updated = model_db::get_model(&self.db, &existing.name)
+        let updated = model_db::update_model(&self.db, desired)
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::internal("model missing after update"))?;
 
-        let model_proto: Models = updated.into();
         let response = UpdateModelResponse {
-            model: Some(Self::sanitize_model(model_proto)),
+            model: Some(Self::sanitize_model(updated)),
             status: Self::ok_status("model updated"),
         };
 
@@ -369,6 +354,7 @@ mod tests {
     use super::*;
     use migration::MigratorTrait;
     use sapphillon_core::proto::google::protobuf::FieldMask;
+    use sapphillon_core::proto::sapphillon::ai::v1::Provider;
 
     /// Creates a model service seeded with the provided providers for testing scenarios.
     ///
@@ -379,9 +365,7 @@ mod tests {
     /// # Returns
     ///
     /// Returns a [`MyModelService`] backed by an in-memory database populated with the given providers.
-    async fn setup_service_with_providers(
-        providers: Vec<entity::entity::provider::Model>,
-    ) -> MyModelService {
+    async fn setup_service_with_providers(providers: Vec<Provider>) -> MyModelService {
         let conn = sea_orm::Database::connect("sqlite::memory:?cache=shared")
             .await
             .expect("connect sqlite memory db");
@@ -408,8 +392,8 @@ mod tests {
     /// # Returns
     ///
     /// Returns a populated provider model struct suitable for database insertion.
-    fn provider(name: &str, display_name: &str) -> entity::entity::provider::Model {
-        entity::entity::provider::Model {
+    fn provider(name: &str, display_name: &str) -> Provider {
+        Provider {
             name: name.to_string(),
             display_name: display_name.to_string(),
             api_key: "key".to_string(),

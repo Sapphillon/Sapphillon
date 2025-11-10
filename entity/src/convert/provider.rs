@@ -41,8 +41,36 @@ impl From<ProtoProvider> for EntityProvider {
     }
 }
 
+impl From<&EntityProvider> for ProtoProvider {
+    fn from(entity: &EntityProvider) -> Self {
+        entity.clone().into()
+    }
+}
+
+impl From<&ProtoProvider> for EntityProvider {
+    fn from(proto: &ProtoProvider) -> Self {
+        proto.clone().into()
+    }
+}
+
+/// Converts a provider entity reference into its proto representation.
+pub fn provider_entity_to_proto(entity: &EntityProvider) -> ProtoProvider {
+    entity.into()
+}
+
+/// Converts a provider proto reference into the corresponding entity model.
+pub fn provider_proto_to_entity(proto: &ProtoProvider) -> EntityProvider {
+    proto.into()
+}
+
+/// Convenience helper to map a slice of provider entities into proto messages.
+pub fn provider_entities_to_proto(entities: &[EntityProvider]) -> Vec<ProtoProvider> {
+    entities.iter().map(provider_entity_to_proto).collect()
+}
+
 #[cfg(test)]
 mod tests {
+    use super::{provider_entities_to_proto, provider_entity_to_proto, provider_proto_to_entity};
     use crate::entity::provider::Model as EntityProvider;
     use sapphillon_core::proto::sapphillon::ai::v1::Provider as ProtoProvider;
 
@@ -84,7 +112,17 @@ mod tests {
         assert_eq!(entity.api_endpoint, proto.api_endpoint);
 
         // Entity -> Proto (round-trip)
-        let proto_round: ProtoProvider = entity.into();
+        let proto_round: ProtoProvider = entity.clone().into();
         assert_eq!(proto_round, proto);
+
+        let via_helper = provider_entity_to_proto(&entity);
+        assert_eq!(via_helper, proto_round);
+
+        let entity_via_helper = provider_proto_to_entity(&proto_round);
+        assert_eq!(entity_via_helper, entity);
+
+        let batch = provider_entities_to_proto(&[entity_via_helper.clone()]);
+        assert_eq!(batch.len(), 1);
+        assert_eq!(batch[0], proto_round);
     }
 }

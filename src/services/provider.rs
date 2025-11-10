@@ -23,7 +23,6 @@ use sea_orm::{DatabaseConnection, DbErr};
 use tonic::{Request, Response, Status};
 
 use database::provider as provider_db;
-use entity::entity::provider as provider_entity;
 use sapphillon_core::proto::google::rpc::{Code as RpcCode, Status as RpcStatus};
 use sapphillon_core::proto::sapphillon::ai::v1::provider_service_server::ProviderService;
 use sapphillon_core::proto::sapphillon::ai::v1::{
@@ -139,22 +138,22 @@ impl ProviderService for MyProviderService {
             incoming.name.clone()
         };
 
-        let model = provider_entity::Model {
-            name: provider_name.clone(),
-            display_name: incoming.display_name,
-            api_key: incoming.api_key,
-            api_endpoint: incoming.api_endpoint,
-        };
+        let stored = provider_db::create_provider(
+            &self.db,
+            Provider {
+                name: provider_name,
+                display_name: incoming.display_name,
+                api_key: incoming.api_key,
+                api_endpoint: incoming.api_endpoint,
+            },
+        )
+        .await
+        .map_err(Self::map_db_error)?;
 
-        provider_db::create_provider(&self.db, model.clone())
-            .await
-            .map_err(Self::map_db_error)?;
+        debug!("Created provider record: {}", stored.name);
 
-        debug!("Created provider record: {provider_name}");
-
-        let provider_proto: Provider = model.into();
         let response = CreateProviderResponse {
-            provider: Some(Self::sanitize_provider(provider_proto)),
+            provider: Some(Self::sanitize_provider(stored)),
             status: Self::ok_status("provider created"),
         };
 
@@ -184,9 +183,8 @@ impl ProviderService for MyProviderService {
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::not_found(format!("provider '{}' not found", req.name)))?;
 
-        let provider_proto: Provider = provider.into();
         let response = GetProviderResponse {
-            provider: Some(Self::sanitize_provider(provider_proto)),
+            provider: Some(Self::sanitize_provider(provider)),
             status: Self::ok_status("provider retrieved"),
         };
 
@@ -224,13 +222,7 @@ impl ProviderService for MyProviderService {
                 .await
                 .map_err(Self::map_db_error)?;
 
-        let providers: Vec<Provider> = providers
-            .into_iter()
-            .map(|model| {
-                let proto: Provider = model.into();
-                Self::sanitize_provider(proto)
-            })
-            .collect();
+        let providers = providers.into_iter().map(Self::sanitize_provider).collect();
 
         let response = ListProvidersResponse {
             providers,
@@ -305,30 +297,38 @@ impl ProviderService for MyProviderService {
         let mask_paths = req.update_mask.map(|mask| mask.paths).unwrap_or_default();
         let update_all = mask_paths.is_empty();
 
-        let desired: provider_entity::Model = incoming.into();
-
         if update_all || mask_paths.iter().any(|path| path == "display_name") {
-            existing.display_name = desired.display_name.clone();
+            if incoming.display_name.trim().is_empty() {
+                return Err(Status::invalid_argument(
+                    "provider.display_name must not be empty",
+                ));
+            }
+            existing.display_name = incoming.display_name.clone();
         }
         if update_all || mask_paths.iter().any(|path| path == "api_key") {
-            existing.api_key = desired.api_key.clone();
+            if incoming.api_key.trim().is_empty() {
+                return Err(Status::invalid_argument(
+                    "provider.api_key must not be empty",
+                ));
+            }
+            existing.api_key = incoming.api_key.clone();
         }
         if update_all || mask_paths.iter().any(|path| path == "api_endpoint") {
-            existing.api_endpoint = desired.api_endpoint.clone();
+            if incoming.api_endpoint.trim().is_empty() {
+                return Err(Status::invalid_argument(
+                    "provider.api_endpoint must not be empty",
+                ));
+            }
+            existing.api_endpoint = incoming.api_endpoint.clone();
         }
 
-        provider_db::update_provider(&self.db, existing.clone())
-            .await
-            .map_err(Self::map_db_error)?;
-
-        let updated = provider_db::get_provider(&self.db, &existing.name)
+        let updated = provider_db::update_provider(&self.db, existing)
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::internal("provider missing after update"))?;
 
-        let provider_proto: Provider = updated.into();
         let response = UpdateProviderResponse {
-            provider: Some(Self::sanitize_provider(provider_proto)),
+            provider: Some(Self::sanitize_provider(updated)),
             status: Self::ok_status("provider updated"),
         };
 
