@@ -22,7 +22,7 @@ use std::sync::Arc;
 use chrono::Utc;
 use database::workflow::{get_workflow_by_id, update_workflow_from_proto};
 use entity::entity::workflow as workflow_entity;
-use log::{error, warn};
+use log::{debug, error, info, warn};
 use sapphillon_core::permission::{Permissions, PluginFunctionPermissions};
 use sapphillon_core::proto::google::protobuf::Timestamp;
 use sapphillon_core::proto::google::rpc::{Code as RpcCode, Status as RpcStatus};
@@ -282,6 +282,17 @@ impl WorkflowService for MyWorkflowService {
             ));
         }
 
+        let has_update_mask = req
+            .update_mask
+            .as_ref()
+            .map(|m| !m.paths.is_empty())
+            .unwrap_or(false);
+        info!(
+            "update_workflow request received: workflow_id={workflow_id}, has_update_mask={has_update_mask}",
+            workflow_id = incoming.id.as_str(),
+            has_update_mask = has_update_mask
+        );
+
         let existing = get_workflow_by_id(&self.db, &incoming.id)
             .await
             .map_err(|err| Self::map_not_found(err, format!("workflow '{}'", incoming.id)))?;
@@ -302,6 +313,11 @@ impl WorkflowService for MyWorkflowService {
             status: Self::ok_status("workflow updated"),
         };
 
+        info!(
+            "workflow updated successfully: workflow_id={workflow_id}",
+            workflow_id = incoming.id.as_str()
+        );
+
         Ok(Response::new(response))
     }
 
@@ -314,6 +330,11 @@ impl WorkflowService for MyWorkflowService {
             return Err(Status::invalid_argument("workflow_id must not be empty"));
         }
 
+        info!(
+            "delete_workflow request received: workflow_id={workflow_id}",
+            workflow_id = req.workflow_id.as_str()
+        );
+
         get_workflow_by_id(&self.db, &req.workflow_id)
             .await
             .map_err(|err| Self::map_not_found(err, format!("workflow '{}'", req.workflow_id)))?;
@@ -323,6 +344,11 @@ impl WorkflowService for MyWorkflowService {
             .await
             .map_err(Self::map_db_error)?;
 
+        info!(
+            "workflow deleted: workflow_id={workflow_id}",
+            workflow_id = req.workflow_id.as_str()
+        );
+
         Ok(Response::new(DeleteWorkflowResponse {}))
     }
 
@@ -331,6 +357,12 @@ impl WorkflowService for MyWorkflowService {
         request: Request<ListWorkflowsRequest>,
     ) -> Result<Response<ListWorkflowsResponse>, Status> {
         let req = request.into_inner();
+        debug!(
+            "list_workflows request received: page_size={page_size}, page_token='{page_token}', has_filter={has_filter}",
+            page_size = req.page_size,
+            page_token = req.page_token.as_str(),
+            has_filter = req.filter.is_some()
+        );
         let page_size = if req.page_size <= 0 {
             None
         } else {
@@ -404,6 +436,11 @@ impl WorkflowService for MyWorkflowService {
             status: Self::ok_status("workflows listed"),
         };
 
+        debug!(
+            "list_workflows response ready: workflow_count={workflow_count}",
+            workflow_count = response.workflows.len()
+        );
+
         Ok(Response::new(response))
     }
 
@@ -422,6 +459,12 @@ impl WorkflowService for MyWorkflowService {
         if description.is_empty() {
             return Err(Status::invalid_argument("description must not be empty"));
         }
+
+        info!(
+            "fix_workflow request received: definition_len={definition_len}, description_len={description_len}",
+            definition_len = definition.len(),
+            description_len = description.len()
+        );
 
         let prompt = format!(
             "Fix the following workflow definition based on the issues described.\\n\\nDefinition:```\\n{definition}\\n```\\n\\nIssues: {description}.\\n\\nProduce an updated workflow.js implementation.",
@@ -466,6 +509,8 @@ impl WorkflowService for MyWorkflowService {
             status: Self::ok_status("workflow fixed"),
         };
 
+        info!("workflow fix generated: workflow_id={workflow_id}");
+
         let (tx, rx) = mpsc::channel(1);
         tokio::spawn(async move {
             let _ = tx.send(Ok(response)).await;
@@ -485,6 +530,11 @@ impl WorkflowService for MyWorkflowService {
             return Err(Status::invalid_argument("workflow_id must not be empty"));
         }
 
+        debug!(
+            "get_workflow request received: workflow_id={workflow_id}",
+            workflow_id = req.workflow_id.as_str()
+        );
+
         let workflow = get_workflow_by_id(&self.db, &req.workflow_id)
             .await
             .map_err(|err| Self::map_not_found(err, format!("workflow '{}'", req.workflow_id)))?;
@@ -493,6 +543,11 @@ impl WorkflowService for MyWorkflowService {
             workflow: Some(workflow),
             status: Self::ok_status("workflow retrieved"),
         };
+
+        debug!(
+            "workflow retrieved: workflow_id={workflow_id}",
+            workflow_id = req.workflow_id.as_str()
+        );
 
         Ok(Response::new(response))
     }
@@ -505,6 +560,11 @@ impl WorkflowService for MyWorkflowService {
         if req.prompt.trim().is_empty() {
             return Err(Status::invalid_argument("prompt must not be empty"));
         }
+
+        info!(
+            "generate_workflow request received: prompt_len={prompt_len}",
+            prompt_len = req.prompt.len()
+        );
 
         let generated = generate_workflow_async(&req.prompt).await.map_err(|err| {
             error!("failed to generate workflow via generator: {err}");
@@ -545,6 +605,13 @@ impl WorkflowService for MyWorkflowService {
             status: Self::ok_status("workflow generated"),
         };
 
+        let generated_workflow_id = response
+            .workflow_definition
+            .as_ref()
+            .map(|wf| wf.id.as_str())
+            .unwrap_or("unknown");
+        info!("workflow generated: workflow_id={generated_workflow_id}");
+
         let (tx, rx) = mpsc::channel(1);
         tokio::spawn(async move {
             let _ = tx.send(Ok(response)).await;
@@ -562,6 +629,13 @@ impl WorkflowService for MyWorkflowService {
         let req = request.into_inner();
         let mut persist_results = false;
         let mut target_code_id: Option<String> = None;
+
+        let source_label = match &req.source {
+            Some(Source::ById(_)) => "by_id",
+            Some(Source::WorkflowDefinition(_)) => "definition",
+            None => "missing",
+        };
+        info!("run_workflow request received: source={source_label}");
 
         let mut workflow = match req.source {
             Some(Source::ById(by_id)) => {
@@ -664,6 +738,13 @@ impl WorkflowService for MyWorkflowService {
             workflow_result: Some(latest_result.clone()),
             status: Self::ok_status("workflow executed successfully"),
         };
+
+        info!(
+            "workflow executed: workflow_id={workflow_id}, workflow_code_id={workflow_code_id}, result_revision={result_revision}",
+            workflow_id = workflow.id.as_str(),
+            workflow_code_id = workflow_code_id.as_str(),
+            result_revision = latest_result.workflow_result_revision
+        );
 
         Ok(Response::new(response))
     }

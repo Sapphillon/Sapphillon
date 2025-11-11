@@ -18,7 +18,7 @@
 
 use std::sync::Arc;
 
-use log::{debug, error};
+use log::{debug, error, info};
 use sea_orm::{DatabaseConnection, DbErr};
 use tonic::{Request, Response, Status};
 
@@ -147,15 +147,22 @@ impl ModelService for MyModelService {
             ));
         }
 
-        let mut model = incoming;
-        let provider_name = model.provider_name.trim().to_string();
-        self.ensure_provider_exists(&provider_name).await?;
-        model.provider_name = provider_name;
+        let has_custom_name = !incoming.name.trim().is_empty();
+        let provider_name_requested = incoming.provider_name.trim().to_string();
+        info!(
+            "create_model request received: has_custom_name={has_custom_name}, provider_name={provider_name}",
+            has_custom_name = has_custom_name,
+            provider_name = provider_name_requested.as_str()
+        );
 
-        let model_name = if model.name.trim().is_empty() {
-            format!("models/{}", uuid::Uuid::new_v4())
-        } else {
+        let mut model = incoming;
+        self.ensure_provider_exists(&provider_name_requested).await?;
+        model.provider_name = provider_name_requested.clone();
+
+        let model_name = if has_custom_name {
             model.name.trim().to_string()
+        } else {
+            format!("models/{}", uuid::Uuid::new_v4())
         };
         model.name = model_name.clone();
 
@@ -163,7 +170,11 @@ impl ModelService for MyModelService {
             .await
             .map_err(Self::map_db_error)?;
 
-        debug!("Created model record: {}", stored.name);
+        info!(
+            "model created successfully: model_name={model_name}, provider_name={provider_name}",
+            model_name = stored.name.as_str(),
+            provider_name = stored.provider_name.as_str()
+        );
 
         let response = CreateModelResponse {
             model: Some(Self::sanitize_model(stored)),
@@ -191,10 +202,20 @@ impl ModelService for MyModelService {
             return Err(Status::invalid_argument("name must not be empty"));
         }
 
+        debug!(
+            "get_model request received: model_name={model_name}",
+            model_name = req.name.as_str()
+        );
+
         let model = model_db::get_model(&self.db, &req.name)
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::not_found(format!("model '{}' not found", req.name)))?;
+
+        debug!(
+            "model retrieved: model_name={model_name}",
+            model_name = req.name.as_str()
+        );
 
         let response = GetModelResponse {
             model: Some(Self::sanitize_model(model)),
@@ -219,6 +240,12 @@ impl ModelService for MyModelService {
     ) -> Result<Response<ListModelsResponse>, Status> {
         let req = request.into_inner();
 
+        debug!(
+            "list_models request received: page_size={page_size}, page_token='{page_token}'",
+            page_size = req.page_size,
+            page_token = req.page_token.as_str()
+        );
+
         let page_size = if req.page_size <= 0 {
             None
         } else {
@@ -234,6 +261,7 @@ impl ModelService for MyModelService {
             .await
             .map_err(Self::map_db_error)?;
 
+        let returned_count = models.len();
         let models: Vec<Models> = models.into_iter().map(Self::sanitize_model).collect();
 
         let response = ListModelsResponse {
@@ -241,6 +269,8 @@ impl ModelService for MyModelService {
             next_page_token,
             status: Self::ok_status("models listed"),
         };
+
+        debug!("list_models response ready: model_count={returned_count}");
 
         Ok(Response::new(response))
     }
@@ -263,6 +293,11 @@ impl ModelService for MyModelService {
             return Err(Status::invalid_argument("name must not be empty"));
         }
 
+        info!(
+            "delete_model request received: model_name={model_name}",
+            model_name = req.name.as_str()
+        );
+
         let existing = model_db::get_model(&self.db, &req.name)
             .await
             .map_err(Self::map_db_error)?
@@ -271,6 +306,11 @@ impl ModelService for MyModelService {
         model_db::delete_model(&self.db, &existing.name)
             .await
             .map_err(Self::map_db_error)?;
+
+        info!(
+            "model deleted: model_name={model_name}",
+            model_name = existing.name.as_str()
+        );
 
         let response = DeleteModelResponse {
             status: Self::ok_status("model deleted"),
@@ -308,6 +348,12 @@ impl ModelService for MyModelService {
 
         let mask_paths = req.update_mask.map(|mask| mask.paths).unwrap_or_default();
         let update_all = mask_paths.is_empty();
+        let has_update_mask = !update_all;
+        info!(
+            "update_model request received: model_name={model_name}, has_update_mask={has_update_mask}",
+            model_name = incoming.name.as_str(),
+            has_update_mask = has_update_mask
+        );
 
         let mut desired = existing.clone();
 
@@ -339,6 +385,11 @@ impl ModelService for MyModelService {
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::internal("model missing after update"))?;
+
+        info!(
+            "model updated successfully: model_name={model_name}",
+            model_name = updated.name.as_str()
+        );
 
         let response = UpdateModelResponse {
             model: Some(Self::sanitize_model(updated)),

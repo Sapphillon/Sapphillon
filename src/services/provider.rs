@@ -18,7 +18,7 @@
 
 use std::sync::Arc;
 
-use log::{debug, error};
+use log::{debug, error, info};
 use sea_orm::{DatabaseConnection, DbErr};
 use tonic::{Request, Response, Status};
 
@@ -132,6 +132,13 @@ impl ProviderService for MyProviderService {
             ));
         }
 
+        let has_custom_name = !incoming.name.trim().is_empty();
+        let has_api_key = !incoming.api_key.trim().is_empty();
+        let api_endpoint = incoming.api_endpoint.trim().to_string();
+        info!(
+            "create_provider request received: has_custom_name={has_custom_name}, has_api_key={has_api_key}, api_endpoint={api_endpoint}"
+        );
+
         let provider_name = if incoming.name.trim().is_empty() {
             format!("providers/{}", uuid::Uuid::new_v4())
         } else {
@@ -150,7 +157,10 @@ impl ProviderService for MyProviderService {
         .await
         .map_err(Self::map_db_error)?;
 
-        debug!("Created provider record: {}", stored.name);
+        info!(
+            "provider created successfully: provider_name={provider_name}",
+            provider_name = stored.name.as_str()
+        );
 
         let response = CreateProviderResponse {
             provider: Some(Self::sanitize_provider(stored)),
@@ -178,10 +188,20 @@ impl ProviderService for MyProviderService {
             return Err(Status::invalid_argument("name must not be empty"));
         }
 
+        debug!(
+            "get_provider request received: provider_name={provider_name}",
+            provider_name = req.name.as_str()
+        );
+
         let provider = provider_db::get_provider(&self.db, &req.name)
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::not_found(format!("provider '{}' not found", req.name)))?;
+
+        debug!(
+            "provider retrieved: provider_name={provider_name}",
+            provider_name = req.name.as_str()
+        );
 
         let response = GetProviderResponse {
             provider: Some(Self::sanitize_provider(provider)),
@@ -206,6 +226,12 @@ impl ProviderService for MyProviderService {
     ) -> Result<Response<ListProvidersResponse>, Status> {
         let req = request.into_inner();
 
+        debug!(
+            "list_providers request received: page_size={}, page_token='{}'",
+            req.page_size,
+            req.page_token.as_str()
+        );
+
         let page_size = if req.page_size <= 0 {
             None
         } else {
@@ -222,13 +248,19 @@ impl ProviderService for MyProviderService {
                 .await
                 .map_err(Self::map_db_error)?;
 
-        let providers = providers.into_iter().map(Self::sanitize_provider).collect();
+        let returned_count = providers.len();
+        let providers = providers
+            .into_iter()
+            .map(Self::sanitize_provider)
+            .collect();
 
         let response = ListProvidersResponse {
             providers,
             next_page_token,
             status: Self::ok_status("providers listed"),
         };
+
+        debug!("list_providers response ready: provider_count={returned_count}");
 
         Ok(Response::new(response))
     }
@@ -251,6 +283,11 @@ impl ProviderService for MyProviderService {
             return Err(Status::invalid_argument("name must not be empty"));
         }
 
+        info!(
+            "delete_provider request received: provider_name={provider_name}",
+            provider_name = req.name.as_str()
+        );
+
         let existing = provider_db::get_provider(&self.db, &req.name)
             .await
             .map_err(Self::map_db_error)?
@@ -259,6 +296,11 @@ impl ProviderService for MyProviderService {
         provider_db::delete_provider(&self.db, &existing.name)
             .await
             .map_err(Self::map_db_error)?;
+
+        info!(
+            "provider deleted: provider_name={provider_name}",
+            provider_name = existing.name.as_str()
+        );
 
         let response = DeleteProviderResponse {
             status: Self::ok_status("provider deleted"),
@@ -296,6 +338,12 @@ impl ProviderService for MyProviderService {
 
         let mask_paths = req.update_mask.map(|mask| mask.paths).unwrap_or_default();
         let update_all = mask_paths.is_empty();
+        let has_update_mask = !mask_paths.is_empty();
+        info!(
+            "update_provider request received: provider_name={provider_name}, has_update_mask={has_update_mask}",
+            provider_name = incoming.name.as_str(),
+            has_update_mask = has_update_mask
+        );
 
         if update_all || mask_paths.iter().any(|path| path == "display_name") {
             if incoming.display_name.trim().is_empty() {
@@ -326,6 +374,11 @@ impl ProviderService for MyProviderService {
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::internal("provider missing after update"))?;
+
+        info!(
+            "provider updated successfully: provider_name={provider_name}",
+            provider_name = updated.name.as_str()
+        );
 
         let response = UpdateProviderResponse {
             provider: Some(Self::sanitize_provider(updated)),
