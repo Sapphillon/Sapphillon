@@ -116,96 +116,13 @@ pub fn proto_to_permission(
 /// Convert an entity `plugin_package::Model` into the proto `PluginPackage`.
 /// This does not attach related `functions` by default; use the "with_relations"
 /// variant when the caller has already loaded related records.
-pub fn plugin_package_to_proto(entity: &EntityPluginPackage) -> ProtoPluginPackage {
-    let installed_at =
-        entity
-            .installed_at
-            .map(|dt| sapphillon_core::proto::google::protobuf::Timestamp {
-                seconds: dt.timestamp(),
-                nanos: dt.timestamp_subsec_nanos() as i32,
-            });
-
-    let updated_at =
-        entity
-            .updated_at
-            .map(|dt| sapphillon_core::proto::google::protobuf::Timestamp {
-                seconds: dt.timestamp(),
-                nanos: dt.timestamp_subsec_nanos() as i32,
-            });
-
-    ProtoPluginPackage {
-        package_id: entity.package_id.clone(),
-        package_name: entity.package_name.clone(),
-        package_version: entity.package_version.clone(),
-        description: entity.description.clone().unwrap_or_default(),
-        functions: Vec::new(),
-        plugin_store_url: entity.plugin_store_url.clone().unwrap_or_default(),
-        internal_plugin: Some(entity.internal_plugin),
-        verified: Some(entity.verified),
-        deprecated: Some(entity.deprecated),
-        installed_at,
-        updated_at,
-    }
-}
-
-/// Like `plugin_package_to_proto` but allows attaching the function list when
-/// the caller has already loaded related `plugin_function` records.
-pub fn plugin_package_to_proto_with_functions(
-    entity: &EntityPluginPackage,
-    functions: Option<&[ProtoPluginFunction]>,
-) -> ProtoPluginPackage {
-    let mut p = plugin_package_to_proto(entity);
-    if let Some(funcs) = functions {
-        p.functions = funcs.to_vec();
-    }
-    p
-}
-
-/// Convert an entity `plugin_function::Model` into the proto `PluginFunction`.
-/// Permissions may be attached when the caller provides them (loaded via relation).
-pub fn plugin_function_to_proto(
-    entity: &EntityPluginFunction,
-    permissions: Option<&[ProtoPermission]>,
-) -> ProtoPluginFunction {
-    let args = entity.arguments.clone().unwrap_or_default();
-    let ret = entity.returns.clone().unwrap_or_default();
-
-    let mut p = ProtoPluginFunction {
-        function_id: entity.function_id.clone(),
-        function_name: entity.function_name.clone(),
-        description: entity.description.clone().unwrap_or_default(),
-        permissions: Vec::new(),
-        arguments: args,
-        returns: ret,
-    };
-
-    if let Some(perms) = permissions {
-        p.permissions = perms.to_vec();
-    }
-
-    p
-}
-
-/// Convert an entity `permission::Model` into the proto `Permission` message.
-pub fn permission_to_proto(entity: &EntityPermission) -> ProtoPermission {
-    // Parse resource_json as Vec<String> when available, otherwise empty.
-    let resource: Vec<String> = match &entity.resource_json {
-        Some(s) => serde_json::from_str(s).unwrap_or_default(),
-        None => Vec::new(),
-    };
-
-    let level = entity
-        .level
-        .unwrap_or(sapphillon_core::proto::sapphillon::v1::PermissionLevel::Unspecified as i32);
-
-    ProtoPermission {
-        display_name: entity.display_name.clone().unwrap_or_default(),
-        description: entity.description.clone().unwrap_or_default(),
-        permission_type: entity.r#type,
-        resource,
-        permission_level: level,
-    }
-}
+// Re-export entity->proto helpers from the dedicated module so existing
+// call sites (which refer to `entity::convert::plugin_code::...`) continue
+// to work without mass-changes across the codebase.
+pub use crate::convert::plugin::{
+    permission_to_proto, plugin_function_to_proto, plugin_package_to_proto,
+    plugin_package_to_proto_with_functions,
+};
 
 pub fn proto_string_to_option(value: &str) -> Option<String> {
     if value.is_empty() {

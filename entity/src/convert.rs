@@ -18,6 +18,7 @@
 
 pub mod model;
 pub mod plugin_code;
+pub mod plugin;
 pub mod provider;
 pub mod workflow_code;
 
@@ -25,6 +26,8 @@ pub mod workflow_code;
 pub use model::*;
 #[allow(unused)]
 pub use plugin_code::*;
+#[allow(unused)]
+pub use plugin::*;
 #[allow(unused)]
 pub use provider::*;
 #[allow(unused)]

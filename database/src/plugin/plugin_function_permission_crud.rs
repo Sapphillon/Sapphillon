@@ -145,6 +145,41 @@ pub(crate) async fn list_plugin_function_permissions(
 }
 
 #[allow(dead_code)]
+/// Batch-load plugin function permission relations for many function IDs.
+///
+/// This returns the same shape as `list_plugin_function_permissions` but fetches
+/// all matching relations and their related permission and function records in a
+/// single database round-trip using `find_also_related`.
+pub(crate) async fn list_plugin_function_permissions_for_function_ids(
+    db: &DatabaseConnection,
+    function_ids: &[String],
+) -> Result<
+    Vec<(
+        plugin_function_permission::Model,
+        Option<permission::Model>,
+        Option<plugin_function::Model>,
+    )>,
+    DbErr,
+> {
+    if function_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // SeaORM allows finding related models in the same query.
+    // We filter by PluginFunctionId IN (..function_ids..) and also fetch the
+    // related permission and plugin_function records.
+    let items = plugin_function_permission::Entity::find()
+        .filter(plugin_function_permission::Column::PluginFunctionId.is_in(function_ids.to_vec()))
+        .find_also_related(permission::Entity)
+        .find_also_related(plugin_function::Entity)
+        .all(db)
+        .await?;
+
+    // `find_also_related` returns Vec<(Model, Option<Related1>, Option<Related2>)>
+    Ok(items)
+}
+
+#[allow(dead_code)]
 /// Deletes a plugin function permission relation by primary key.
 ///
 /// # Arguments
@@ -367,6 +402,49 @@ mod tests {
         delete_plugin_function_permission(&db, id).await?;
         let got_after = get_plugin_function_permission(&db, id).await?;
         assert!(got_after.is_none());
+        Ok(())
+    }
+
+    /// Ensures the batched loader returns relations for multiple function ids in one call.
+    #[tokio::test]
+    async fn test_batch_list_plugin_function_permissions() -> Result<(), DbErr> {
+        let db = setup_db().await?;
+        // insert two functions and two permissions
+        insert_test_function(&db, "funcA").await?;
+        insert_test_function(&db, "funcB").await?;
+        insert_test_permission(&db, 11, "funcA").await?;
+        insert_test_permission(&db, 12, "funcB").await?;
+
+        let pfp_a = plugin_function_permission::Model {
+            id: 0,
+            plugin_function_id: "funcA".to_string(),
+            permission_id: "11".to_string(),
+        };
+        let pfp_b = plugin_function_permission::Model {
+            id: 0,
+            plugin_function_id: "funcB".to_string(),
+            permission_id: "12".to_string(),
+        };
+        create_plugin_function_permission(&db, pfp_a).await?;
+        create_plugin_function_permission(&db, pfp_b).await?;
+
+        let ids = vec!["funcA".to_string(), "funcB".to_string()];
+        let list = list_plugin_function_permissions_for_function_ids(&db, &ids).await?;
+        // should return two relation tuples
+        assert_eq!(list.len(), 2);
+
+        // check that each tuple contains the related permission entity
+        let mut found_permissions = vec![];
+        for (_rel, perm_opt, func_opt) in list.into_iter() {
+            assert!(func_opt.is_some());
+            assert!(perm_opt.is_some());
+            let perm = perm_opt.unwrap();
+            found_permissions.push((perm.plugin_function_id.clone(), perm.id));
+        }
+
+        found_permissions.sort();
+        assert_eq!(found_permissions, vec![("funcA".to_string(), 11), ("funcB".to_string(), 12)]);
+
         Ok(())
     }
 }
