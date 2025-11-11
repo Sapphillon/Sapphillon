@@ -131,12 +131,11 @@ impl MyWorkflowService {
                 "workflow_language" => desired.workflow_language = incoming.workflow_language,
                 "workflow_code" => desired.workflow_code = incoming.workflow_code.clone(),
                 "workflow_results" => desired.workflow_results = incoming.workflow_results.clone(),
-                "updated_at" => desired.updated_at = incoming.updated_at.clone(),
+                "updated_at" => desired.updated_at = incoming.updated_at,
                 "created_at" => {
                     desired.created_at = incoming
                         .created_at
-                        .clone()
-                        .or_else(|| existing.created_at.clone())
+                        .or(existing.created_at)
                 }
                 other => {
                     return Err(Status::invalid_argument(format!(
@@ -175,10 +174,10 @@ impl MyWorkflowService {
         }
 
         if overwrite_all {
-            if let Some(created_at) = incoming.created_at.clone() {
+            if let Some(created_at) = incoming.created_at {
                 desired.created_at = Some(created_at);
             }
-            desired.updated_at = incoming.updated_at.clone();
+            desired.updated_at = incoming.updated_at;
         }
 
         desired
@@ -291,7 +290,7 @@ impl WorkflowService for MyWorkflowService {
         let mut desired = Self::apply_update_mask(&existing, &incoming, &mask_paths)?;
         desired.updated_at = Some(Self::now_timestamp());
         if desired.created_at.is_none() {
-            desired.created_at = existing.created_at.clone();
+            desired.created_at = existing.created_at;
         }
 
         let updated = update_workflow_from_proto(&self.db, &desired)
@@ -446,13 +445,13 @@ impl WorkflowService for MyWorkflowService {
                 code_revision: 1,
                 code: Self::sanitize_generated_code(&generated),
                 language: WORKFLOW_LANGUAGE_JS,
-                created_at: Some(timestamp.clone()),
+                created_at: Some(timestamp),
                 result: vec![],
                 plugin_packages: vec![],
                 plugin_function_ids: vec![],
                 allowed_permissions: vec![],
             }],
-            created_at: Some(timestamp.clone()),
+            created_at: Some(timestamp),
             updated_at: Some(timestamp),
             workflow_results: vec![],
         };
@@ -526,14 +525,14 @@ impl WorkflowService for MyWorkflowService {
                 code_revision: 1,
                 code: Self::sanitize_generated_code(&generated),
                 language: WORKFLOW_LANGUAGE_JS,
-                created_at: Some(now_ts.clone()),
+                created_at: Some(now_ts),
                 result: vec![],
                 plugin_packages: vec![],
                 plugin_function_ids: vec![],
                 allowed_permissions: vec![],
             }],
-            created_at: Some(now_ts.clone()),
-            updated_at: Some(now_ts.clone()),
+            created_at: Some(now_ts),
+            updated_at: Some(now_ts),
             workflow_results: vec![],
         };
 
@@ -603,7 +602,7 @@ impl WorkflowService for MyWorkflowService {
                 .iter_mut()
                 .find(|code| code.id == *code_id)
                 .ok_or_else(|| {
-                    Status::not_found(format!("workflow code '{}' not found", code_id))
+                    Status::not_found(format!("workflow code '{code_id}' not found"))
                 })?
         } else {
             workflow
@@ -667,5 +666,116 @@ impl WorkflowService for MyWorkflowService {
         };
 
         Ok(Response::new(response))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sapphillon_core::proto::google::protobuf::Timestamp;
+    use sapphillon_core::proto::sapphillon::v1::WorkflowResultType;
+    use tonic::Code;
+
+    fn base_timestamp() -> Timestamp {
+        Timestamp {
+            seconds: 1,
+            nanos: 0,
+        }
+    }
+
+    fn base_workflow() -> Workflow {
+        Workflow {
+            id: "wf-1".to_string(),
+            display_name: "Original Workflow".to_string(),
+            description: "baseline".to_string(),
+            workflow_language: WORKFLOW_LANGUAGE_JS,
+            workflow_code: vec![WorkflowCode {
+                id: "code-1".to_string(),
+                code_revision: 1,
+                code: "function workflow() {}".to_string(),
+                language: WORKFLOW_LANGUAGE_JS,
+                created_at: Some(base_timestamp()),
+                result: vec![WorkflowResult {
+                    id: "result-1".to_string(),
+                    display_name: "Initial".to_string(),
+                    description: "seed".to_string(),
+                    result: "{}".to_string(),
+                    ran_at: Some(base_timestamp()),
+                    result_type: WorkflowResultType::SuccessUnspecified as i32,
+                    exit_code: 0,
+                    workflow_result_revision: 1,
+                }],
+                plugin_packages: vec![],
+                plugin_function_ids: vec![],
+                allowed_permissions: vec![],
+            }],
+            created_at: Some(base_timestamp()),
+            updated_at: Some(base_timestamp()),
+            workflow_results: vec![WorkflowResult {
+                id: "result-1".to_string(),
+                display_name: "Initial".to_string(),
+                description: "seed".to_string(),
+                result: "{}".to_string(),
+                ran_at: Some(base_timestamp()),
+                result_type: WorkflowResultType::SuccessUnspecified as i32,
+                exit_code: 0,
+                workflow_result_revision: 1,
+            }],
+        }
+    }
+
+    #[test]
+    fn sanitize_generated_code_appends_workflow_call() {
+        let raw = "function workflow() {\n  return 42;\n}";
+        let sanitized = MyWorkflowService::sanitize_generated_code(raw);
+        assert!(sanitized.ends_with("workflow();"));
+    }
+
+    #[test]
+    fn sanitize_generated_code_preserves_existing_call() {
+        let raw = "function workflow() {}\nworkflow();";
+        let sanitized = MyWorkflowService::sanitize_generated_code(raw);
+        assert_eq!(sanitized, "function workflow() {}\nworkflow();");
+    }
+
+    #[test]
+    fn derive_display_name_truncates_long_input() {
+        let long = "a".repeat(200);
+        let derived = MyWorkflowService::derive_display_name(&long);
+        assert!(!derived.is_empty());
+        assert!(derived.len() <= MAX_DISPLAY_NAME_LEN);
+    }
+
+    #[test]
+    fn encode_decode_page_token_round_trip() {
+        let offset = 12345_u64;
+        let token = MyWorkflowService::encode_page_token(offset);
+        assert_eq!(MyWorkflowService::decode_page_token(&token), offset);
+    }
+
+    #[test]
+    fn apply_update_mask_overrides_listed_fields() {
+        let existing = base_workflow();
+        let mut incoming = existing.clone();
+        incoming.display_name = "Updated Workflow".to_string();
+        incoming.description = "new description".to_string();
+        incoming.workflow_language = WORKFLOW_LANGUAGE_UNSPECIFIED;
+        incoming.updated_at = Some(base_timestamp());
+
+        let mask = vec!["display_name".to_string(), "description".to_string()];
+        let result = MyWorkflowService::apply_update_mask(&existing, &incoming, &mask).unwrap();
+
+        assert_eq!(result.display_name, "Updated Workflow");
+        assert_eq!(result.description, "new description");
+        assert_eq!(result.workflow_language, existing.workflow_language);
+    }
+
+    #[test]
+    fn apply_update_mask_rejects_unknown_field() {
+        let existing = base_workflow();
+        let incoming = existing.clone();
+        let mask = vec!["unsupported".to_string()];
+        let err = MyWorkflowService::apply_update_mask(&existing, &incoming, &mask).unwrap_err();
+        assert_eq!(err.code(), Code::InvalidArgument);
     }
 }
