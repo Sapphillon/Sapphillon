@@ -11,6 +11,24 @@
 		}
 	],
 	"settings": {},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "build: Sapphillon-Controller",
+				"command": "cargo build --workspace --all-features",
+				"type": "shell",
+				"args": [],
+				"problemMatcher": [
+					"$rustc"
+				],
+				"presentation": {
+					"reveal": "always"
+				},
+				"group": "build"
+			}
+		]
+	},
 	"launch": {
 		"configurations": [
 			{
@@ -28,7 +46,8 @@
 				"sourceLanguages": [
 					"rust"
 				],
-				"envFile": ".env"
+				"envFile": ".env",
+				"preLaunchTask": "build: Sapphillon-Controller"
 			}
 		]
 	}
