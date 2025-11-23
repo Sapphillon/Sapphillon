@@ -122,7 +122,7 @@ impl MyWorkflowService {
         existing: &Workflow,
         incoming: &Workflow,
         mask_paths: &[String],
-    ) -> Result<Workflow, Status> {
+    ) -> Result<Workflow, Box<Status>> {
         if mask_paths.is_empty() {
             return Ok(Self::merge_workflow(existing, incoming, true));
         }
@@ -138,9 +138,9 @@ impl MyWorkflowService {
                 "updated_at" => desired.updated_at = incoming.updated_at,
                 "created_at" => desired.created_at = incoming.created_at.or(existing.created_at),
                 other => {
-                    return Err(Status::invalid_argument(format!(
+                    return Err(Box::new(Status::invalid_argument(format!(
                         "unsupported update_mask path: {other}"
-                    )));
+                    ))));
                 }
             }
         }
@@ -155,9 +155,7 @@ impl MyWorkflowService {
             desired.display_name = incoming.display_name.clone();
         }
 
-        if overwrite_all {
-            desired.description = incoming.description.clone();
-        } else if !incoming.description.is_empty() {
+        if overwrite_all || !incoming.description.is_empty() {
             desired.description = incoming.description.clone();
         }
 
@@ -298,7 +296,8 @@ impl WorkflowService for MyWorkflowService {
             .map_err(|err| Self::map_not_found(err, format!("workflow '{}'", incoming.id)))?;
 
         let mask_paths = req.update_mask.map(|mask| mask.paths).unwrap_or_default();
-        let mut desired = Self::apply_update_mask(&existing, &incoming, &mask_paths)?;
+        let mut desired =
+            Self::apply_update_mask(&existing, &incoming, &mask_paths).map_err(|e| *e)?;
         desired.updated_at = Some(Self::now_timestamp());
         if desired.created_at.is_none() {
             desired.created_at = existing.created_at;
