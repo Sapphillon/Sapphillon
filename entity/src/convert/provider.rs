@@ -121,7 +121,7 @@ mod tests {
         let entity_via_helper = provider_proto_to_entity(&proto_round);
         assert_eq!(entity_via_helper, entity);
 
-        let batch = provider_entities_to_proto(&[entity_via_helper.clone()]);
+        let batch = provider_entities_to_proto(std::slice::from_ref(&entity_via_helper));
         assert_eq!(batch.len(), 1);
         assert_eq!(batch[0], proto_round);
     }

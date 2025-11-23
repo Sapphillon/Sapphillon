@@ -173,7 +173,7 @@ mod tests {
         assert_eq!(proto_perm.display_name, "Read");
         assert_eq!(proto_perm.resource.len(), 1);
 
-        let proto_fn = plugin_function_to_proto(&f, Some(&[proto_perm.clone()]));
+        let proto_fn = plugin_function_to_proto(&f, Some(std::slice::from_ref(&proto_perm)));
         assert_eq!(proto_fn.function_id, f.function_id);
         assert_eq!(proto_fn.permissions.len(), 1);
     }

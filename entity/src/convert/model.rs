@@ -98,7 +98,7 @@ mod tests {
         let entity_via_helper = model_proto_to_entity(&proto);
         assert_eq!(entity_via_helper, entity);
 
-        let batch = model_entities_to_proto(&[entity.clone()]);
+        let batch = model_entities_to_proto(std::slice::from_ref(&entity));
         assert_eq!(batch.len(), 1);
         assert_eq!(batch[0], proto);
     }
