@@ -956,10 +956,14 @@ version = "0.5.6"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
+ "chrono",
  "entity",
+ "prost-types",
  "sapphillon_core",
  "sea-orm",
+ "serde_json",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -1187,8 +1191,10 @@ name = "entity"
 version = "0.5.6"
 dependencies = [
  "anyhow",
+ "chrono",
  "sapphillon_core",
  "sea-orm",
+ "serde_json",
 ]
 
 [[package]]

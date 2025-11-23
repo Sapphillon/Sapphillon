@@ -17,6 +17,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 mod args;
+mod init;
 mod server;
 mod services;
 mod workflow;
@@ -30,15 +31,25 @@ mod sysconfig;
 
 use anyhow::Result;
 use clap::Parser;
+
+#[allow(unused)]
 use log::{debug, error, info, warn};
 
 use args::{Args, Command};
-use migration::MigratorTrait;
 use server::start_server; // bring `up`/`down` methods into scope
 
 #[allow(unused)]
 pub(crate) static GLOBAL_STATE: global::GlobalState = global::GlobalState::new();
 
+/// Bootstraps the application, wiring logging, migrations, and the gRPC server lifecycle.
+///
+/// # Arguments
+///
+/// This entry point takes no arguments beyond the implicit command-line parsing performed by `clap`.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when the server exits cleanly, or an error propagated from initialization tasks.
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let args = Args::parse();
@@ -61,51 +72,22 @@ async fn main() -> Result<()> {
     for line in app_info.lines() {
         log::info!("{line}");
     }
-    // End Initialization
-
-    debug!("GLOBAL_STATE: {GLOBAL_STATE}");
+    // END
 
     // Check db_url
     info!("Using database URL: {}", args.db_url);
     if args.db_url == "sqlite:memory:" {
         warn!("Using in-memory SQLite database. Data will not be persisted.");
     }
+    // Initialize Database Connection
+
+    GLOBAL_STATE.async_set_db_url(args.db_url.clone()).await;
 
     match args.command {
         Command::Start => {
-            // Start the gRPC server and demonstrate client communication
-            debug!("Log level set to: {:?}", args.loglevel);
+            // Initialize system (migrations, etc.)
 
-            // Initialize Database Connection
-            GLOBAL_STATE.async_set_db_url(args.db_url.clone()).await;
-
-            // Run migrations immediately after setting DB URL so the schema
-            // is ready before the server starts accepting requests.
-            info!("Running database migrations...");
-            let database_connection =
-                sea_orm::Database::connect(GLOBAL_STATE.async_get_db_url().await.as_str()).await;
-            match database_connection {
-                Ok(conn) => {
-                    // Attempt to run migrations from the `migration` crate.
-                    // If this fails, log the error and exit since the server
-                    // depends on a correct schema state.
-                    if let Err(e) = migration::Migrator::up(&conn, None).await {
-                        error!("Database migration failed: {e:#?}");
-                        // Ensure we don't continue in a bad state.
-                        std::process::exit(1);
-                    }
-
-                    // Mark DB as initialized so other tasks can proceed.
-                    GLOBAL_STATE.async_set_db_initialized(true).await;
-                    info!("Database migrations applied");
-                }
-                Err(e) => {
-                    error!("Failed to obtain DB connection for migrations: {e:#?}");
-                    std::process::exit(1);
-                }
-            }
-
-            debug!("GLOBAL_STATE: {GLOBAL_STATE}");
+            init::initialize_system(&args).await?;
 
             // Start server in a background task
             let server_handle = tokio::spawn(async {

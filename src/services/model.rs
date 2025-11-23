@@ -18,12 +18,11 @@
 
 use std::sync::Arc;
 
-use log::{debug, error};
+use log::{debug, error, info};
 use sea_orm::{DatabaseConnection, DbErr};
 use tonic::{Request, Response, Status};
 
 use database::{model as model_db, provider as provider_db};
-use entity::entity::model as model_entity;
 use sapphillon_core::proto::google::rpc::{Code as RpcCode, Status as RpcStatus};
 use sapphillon_core::proto::sapphillon::ai::v1::model_service_server::ModelService;
 use sapphillon_core::proto::sapphillon::ai::v1::{
@@ -38,14 +37,41 @@ pub struct MyModelService {
 }
 
 impl MyModelService {
+    /// Constructs a new model service using the provided database connection.
+    ///
+    /// # Arguments
+    ///
+    /// * `db` - The database connection used to persist model records.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`MyModelService`] with the connection wrapped in an [`Arc`].
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db: Arc::new(db) }
     }
 
+    /// Sanitizes a model proto before returning it to clients.
+    ///
+    /// # Arguments
+    ///
+    /// * `model` - The model proto to sanitize.
+    ///
+    /// # Returns
+    ///
+    /// Returns the sanitized model proto. Currently returns the input unchanged.
     fn sanitize_model(model: Models) -> Models {
         model
     }
 
+    /// Builds a success status message for API responses.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - Human-readable text describing the successful operation.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`RpcStatus`] tagged with the `Ok` code and containing the provided message.
     fn ok_status(message: impl Into<String>) -> Option<RpcStatus> {
         Some(RpcStatus {
             code: RpcCode::Ok as i32,
@@ -54,11 +80,29 @@ impl MyModelService {
         })
     }
 
+    /// Converts SeaORM errors into gRPC [`Status`] instances while logging the context.
+    ///
+    /// # Arguments
+    ///
+    /// * `err` - The database error that occurred.
+    ///
+    /// # Returns
+    ///
+    /// Returns an internal error status suitable for returning to API callers.
     fn map_db_error(err: DbErr) -> Status {
         error!("Database error occurred while handling model request: {err:?}");
         Status::internal("database operation failed")
     }
 
+    /// Ensures a referenced provider exists before performing model updates.
+    ///
+    /// # Arguments
+    ///
+    /// * `provider_name` - The name of the provider to verify.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` when the provider is present, or a not-found status otherwise.
     async fn ensure_provider_exists(&self, provider_name: &str) -> Result<(), Status> {
         provider_db::get_provider(&self.db, provider_name)
             .await
@@ -74,6 +118,15 @@ impl MyModelService {
 
 #[tonic::async_trait]
 impl ModelService for MyModelService {
+    /// Creates a new model after validating the payload and provider reference.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The gRPC request containing the model to persist.
+    ///
+    /// # Returns
+    ///
+    /// Returns a gRPC response with the sanitized model or an error when validation fails.
     async fn create_model(
         &self,
         request: Request<CreateModelRequest>,
@@ -94,37 +147,53 @@ impl ModelService for MyModelService {
             ));
         }
 
-        self.ensure_provider_exists(incoming.provider_name.trim())
+        let has_custom_name = !incoming.name.trim().is_empty();
+        let provider_name_requested = incoming.provider_name.trim().to_string();
+        info!(
+            "create_model request received: has_custom_name={has_custom_name}, provider_name={provider_name}",
+            has_custom_name = has_custom_name,
+            provider_name = provider_name_requested.as_str()
+        );
+
+        let mut model = incoming;
+        self.ensure_provider_exists(&provider_name_requested)
             .await?;
+        model.provider_name = provider_name_requested.clone();
 
-        let model_name = if incoming.name.trim().is_empty() {
-            format!("models/{}", uuid::Uuid::new_v4())
+        let model_name = if has_custom_name {
+            model.name.trim().to_string()
         } else {
-            incoming.name.clone()
+            format!("models/{}", uuid::Uuid::new_v4())
         };
+        model.name = model_name.clone();
 
-        let model = model_entity::Model {
-            name: model_name.clone(),
-            display_name: incoming.display_name,
-            description: incoming.description,
-            provider_name: incoming.provider_name,
-        };
-
-        model_db::create_model(&self.db, model.clone())
+        let stored = model_db::create_model(&self.db, model)
             .await
             .map_err(Self::map_db_error)?;
 
-        debug!("Created model record: {model_name}");
+        info!(
+            "model created successfully: model_name={model_name}, provider_name={provider_name}",
+            model_name = stored.name.as_str(),
+            provider_name = stored.provider_name.as_str()
+        );
 
-        let model_proto: Models = model.into();
         let response = CreateModelResponse {
-            model: Some(Self::sanitize_model(model_proto)),
+            model: Some(Self::sanitize_model(stored)),
             status: Self::ok_status("model created"),
         };
 
         Ok(Response::new(response))
     }
 
+    /// Retrieves a model by name, returning a sanitized proto when found.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The gRPC request specifying the model name to fetch.
+    ///
+    /// # Returns
+    ///
+    /// Returns the located model or a not-found status when it does not exist.
     async fn get_model(
         &self,
         request: Request<GetModelRequest>,
@@ -134,25 +203,49 @@ impl ModelService for MyModelService {
             return Err(Status::invalid_argument("name must not be empty"));
         }
 
+        debug!(
+            "get_model request received: model_name={model_name}",
+            model_name = req.name.as_str()
+        );
+
         let model = model_db::get_model(&self.db, &req.name)
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::not_found(format!("model '{}' not found", req.name)))?;
 
-        let model_proto: Models = model.into();
+        debug!(
+            "model retrieved: model_name={model_name}",
+            model_name = req.name.as_str()
+        );
+
         let response = GetModelResponse {
-            model: Some(Self::sanitize_model(model_proto)),
+            model: Some(Self::sanitize_model(model)),
             status: Self::ok_status("model retrieved"),
         };
 
         Ok(Response::new(response))
     }
 
+    /// Lists models with optional pagination parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The gRPC request containing pagination options.
+    ///
+    /// # Returns
+    ///
+    /// Returns a paginated list of sanitized models plus the next page token when available.
     async fn list_models(
         &self,
         request: Request<ListModelsRequest>,
     ) -> Result<Response<ListModelsResponse>, Status> {
         let req = request.into_inner();
+
+        debug!(
+            "list_models request received: page_size={page_size}, page_token='{page_token}'",
+            page_size = req.page_size,
+            page_token = req.page_token.as_str()
+        );
 
         let page_size = if req.page_size <= 0 {
             None
@@ -169,10 +262,8 @@ impl ModelService for MyModelService {
             .await
             .map_err(Self::map_db_error)?;
 
-        let models: Vec<Models> = models
-            .into_iter()
-            .map(|model| Self::sanitize_model(model.into()))
-            .collect();
+        let returned_count = models.len();
+        let models: Vec<Models> = models.into_iter().map(Self::sanitize_model).collect();
 
         let response = ListModelsResponse {
             models,
@@ -180,9 +271,20 @@ impl ModelService for MyModelService {
             status: Self::ok_status("models listed"),
         };
 
+        debug!("list_models response ready: model_count={returned_count}");
+
         Ok(Response::new(response))
     }
 
+    /// Deletes a model after confirming it exists.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The gRPC request identifying which model to remove.
+    ///
+    /// # Returns
+    ///
+    /// Returns a gRPC response conveying success or an error if the model is missing or deletion fails.
     async fn delete_model(
         &self,
         request: Request<DeleteModelRequest>,
@@ -191,6 +293,11 @@ impl ModelService for MyModelService {
         if req.name.trim().is_empty() {
             return Err(Status::invalid_argument("name must not be empty"));
         }
+
+        info!(
+            "delete_model request received: model_name={model_name}",
+            model_name = req.name.as_str()
+        );
 
         let existing = model_db::get_model(&self.db, &req.name)
             .await
@@ -201,6 +308,11 @@ impl ModelService for MyModelService {
             .await
             .map_err(Self::map_db_error)?;
 
+        info!(
+            "model deleted: model_name={model_name}",
+            model_name = existing.name.as_str()
+        );
+
         let response = DeleteModelResponse {
             status: Self::ok_status("model deleted"),
         };
@@ -208,6 +320,15 @@ impl ModelService for MyModelService {
         Ok(Response::new(response))
     }
 
+    /// Applies updates to an existing model using an optional field mask.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The gRPC request containing the model changes and mask.
+    ///
+    /// # Returns
+    ///
+    /// Returns the updated model or an error when validation, provider lookup, or persistence fails.
     async fn update_model(
         &self,
         request: Request<UpdateModelRequest>,
@@ -221,52 +342,58 @@ impl ModelService for MyModelService {
             return Err(Status::invalid_argument("model.name must not be empty"));
         }
 
-        let mut existing = model_db::get_model(&self.db, &incoming.name)
+        let existing = model_db::get_model(&self.db, &incoming.name)
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::not_found(format!("model '{}' not found", incoming.name)))?;
 
         let mask_paths = req.update_mask.map(|mask| mask.paths).unwrap_or_default();
         let update_all = mask_paths.is_empty();
+        let has_update_mask = !update_all;
+        info!(
+            "update_model request received: model_name={model_name}, has_update_mask={has_update_mask}",
+            model_name = incoming.name.as_str(),
+            has_update_mask = has_update_mask
+        );
 
-        let desired: model_entity::Model = incoming.clone().into();
+        let mut desired = existing.clone();
 
         if update_all || mask_paths.iter().any(|path| path == "display_name") {
-            if desired.display_name.trim().is_empty() {
+            if incoming.display_name.trim().is_empty() {
                 return Err(Status::invalid_argument(
                     "model.display_name must not be empty",
                 ));
             }
-            existing.display_name = desired.display_name.clone();
+            desired.display_name = incoming.display_name.clone();
         }
 
         if update_all || mask_paths.iter().any(|path| path == "description") {
-            existing.description = desired.description.clone();
+            desired.description = incoming.description.clone();
         }
 
         if update_all || mask_paths.iter().any(|path| path == "provider_name") {
-            if desired.provider_name.trim().is_empty() {
+            if incoming.provider_name.trim().is_empty() {
                 return Err(Status::invalid_argument(
                     "model.provider_name must not be empty",
                 ));
             }
-            self.ensure_provider_exists(desired.provider_name.trim())
-                .await?;
-            existing.provider_name = desired.provider_name.clone();
+            let provider_name = incoming.provider_name.trim().to_string();
+            self.ensure_provider_exists(&provider_name).await?;
+            desired.provider_name = provider_name;
         }
 
-        model_db::update_model(&self.db, existing.clone())
-            .await
-            .map_err(Self::map_db_error)?;
-
-        let updated = model_db::get_model(&self.db, &existing.name)
+        let updated = model_db::update_model(&self.db, desired)
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::internal("model missing after update"))?;
 
-        let model_proto: Models = updated.into();
+        info!(
+            "model updated successfully: model_name={model_name}",
+            model_name = updated.name.as_str()
+        );
+
         let response = UpdateModelResponse {
-            model: Some(Self::sanitize_model(model_proto)),
+            model: Some(Self::sanitize_model(updated)),
             status: Self::ok_status("model updated"),
         };
 
@@ -279,10 +406,18 @@ mod tests {
     use super::*;
     use migration::MigratorTrait;
     use sapphillon_core::proto::google::protobuf::FieldMask;
+    use sapphillon_core::proto::sapphillon::ai::v1::Provider;
 
-    async fn setup_service_with_providers(
-        providers: Vec<entity::entity::provider::Model>,
-    ) -> MyModelService {
+    /// Creates a model service seeded with the provided providers for testing scenarios.
+    ///
+    /// # Arguments
+    ///
+    /// * `providers` - The providers to insert before constructing the service.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`MyModelService`] backed by an in-memory database populated with the given providers.
+    async fn setup_service_with_providers(providers: Vec<Provider>) -> MyModelService {
         let conn = sea_orm::Database::connect("sqlite::memory:?cache=shared")
             .await
             .expect("connect sqlite memory db");
@@ -299,8 +434,18 @@ mod tests {
         MyModelService::new(conn)
     }
 
-    fn provider(name: &str, display_name: &str) -> entity::entity::provider::Model {
-        entity::entity::provider::Model {
+    /// Builds a provider model for use in tests.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The provider resource name.
+    /// * `display_name` - The human-readable label for the provider.
+    ///
+    /// # Returns
+    ///
+    /// Returns a populated provider model struct suitable for database insertion.
+    fn provider(name: &str, display_name: &str) -> Provider {
+        Provider {
             name: name.to_string(),
             display_name: display_name.to_string(),
             api_key: "key".to_string(),
@@ -308,6 +453,15 @@ mod tests {
         }
     }
 
+    /// Verifies creating and fetching a model persists the expected data.
+    ///
+    /// # Arguments
+    ///
+    /// This asynchronous test takes no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `()` once the round-trip assertions complete successfully.
     #[tokio::test]
     async fn create_and_get_model_roundtrip() {
         let service = setup_service_with_providers(vec![provider("providers/test", "Test")]).await;
@@ -346,6 +500,15 @@ mod tests {
         assert_eq!(fetched_model.description.as_deref(), Some("desc"));
     }
 
+    /// Ensures updating a model and listing models reflects the latest changes.
+    ///
+    /// # Arguments
+    ///
+    /// This asynchronous test takes no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `()` after verifying update operations and paginated listing.
     #[tokio::test]
     async fn update_and_list_models() {
         let service = setup_service_with_providers(vec![provider("providers/base", "Base")]).await;
@@ -403,6 +566,15 @@ mod tests {
         assert!(list_resp.next_page_token.is_empty());
     }
 
+    /// Confirms deleting a model removes it from persistence.
+    ///
+    /// # Arguments
+    ///
+    /// This asynchronous test takes no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `()` after asserting the model is no longer retrievable.
     #[tokio::test]
     async fn delete_model_removes_record() {
         let service = setup_service_with_providers(vec![provider("providers/main", "Main")]).await;
@@ -439,6 +611,15 @@ mod tests {
         assert_eq!(err.code(), tonic::Code::NotFound);
     }
 
+    /// Ensures model creation fails when the referenced provider is missing.
+    ///
+    /// # Arguments
+    ///
+    /// This asynchronous test takes no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `()` once the expected not-found error is observed.
     #[tokio::test]
     async fn create_model_requires_existing_provider() {
         let service = setup_service_with_providers(vec![]).await;

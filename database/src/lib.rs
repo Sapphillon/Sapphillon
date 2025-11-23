@@ -17,4 +17,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod model;
+pub mod permission;
+pub mod plugin;
 pub mod provider;
+pub mod workflow;

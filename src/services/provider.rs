@@ -18,12 +18,11 @@
 
 use std::sync::Arc;
 
-use log::{debug, error};
+use log::{debug, error, info};
 use sea_orm::{DatabaseConnection, DbErr};
 use tonic::{Request, Response, Status};
 
 use database::provider as provider_db;
-use entity::entity::provider as provider_entity;
 use sapphillon_core::proto::google::rpc::{Code as RpcCode, Status as RpcStatus};
 use sapphillon_core::proto::sapphillon::ai::v1::provider_service_server::ProviderService;
 use sapphillon_core::proto::sapphillon::ai::v1::{
@@ -38,15 +37,42 @@ pub struct MyProviderService {
 }
 
 impl MyProviderService {
+    /// Constructs a new provider service backed by the supplied database connection.
+    ///
+    /// # Arguments
+    ///
+    /// * `db` - The database connection used to persist provider records.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`MyProviderService`] wrapping the given connection inside an [`Arc`].
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db: Arc::new(db) }
     }
 
+    /// Clears sensitive fields from a provider proto before returning it to clients.
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - The provider proto to sanitize.
+    ///
+    /// # Returns
+    ///
+    /// Returns a provider proto with the API key field cleared.
     fn sanitize_provider(mut provider: Provider) -> Provider {
         provider.api_key.clear();
         provider
     }
 
+    /// Creates a success status wrapper to embed in API responses.
+    ///
+    /// # Arguments
+    ///
+    /// * `message` - Human-readable detail describing the successful operation.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`RpcStatus`] marked as `Ok` with the supplied message.
     fn ok_status(message: impl Into<String>) -> Option<RpcStatus> {
         Some(RpcStatus {
             code: RpcCode::Ok as i32,
@@ -55,6 +81,15 @@ impl MyProviderService {
         })
     }
 
+    /// Converts a SeaORM error into a gRPC [`Status`] while logging diagnostic details.
+    ///
+    /// # Arguments
+    ///
+    /// * `err` - The database error encountered during an operation.
+    ///
+    /// # Returns
+    ///
+    /// Returns an internal gRPC status suitable for surfacing to clients.
     fn map_db_error(err: DbErr) -> Status {
         error!("Database error occurred while handling provider request: {err:?}");
         Status::internal("database operation failed")
@@ -63,6 +98,15 @@ impl MyProviderService {
 
 #[tonic::async_trait]
 impl ProviderService for MyProviderService {
+    /// Handles provider creation requests by validating input and persisting the record.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The gRPC request containing the provider definition to create.
+    ///
+    /// # Returns
+    ///
+    /// Returns a gRPC response with the sanitized provider or an error if validation or persistence fails.
     async fn create_provider(
         &self,
         request: Request<CreateProviderRequest>,
@@ -88,34 +132,53 @@ impl ProviderService for MyProviderService {
             ));
         }
 
+        let has_custom_name = !incoming.name.trim().is_empty();
+        let has_api_key = !incoming.api_key.trim().is_empty();
+        let api_endpoint = incoming.api_endpoint.trim().to_string();
+        info!(
+            "create_provider request received: has_custom_name={has_custom_name}, has_api_key={has_api_key}, api_endpoint={api_endpoint}"
+        );
+
         let provider_name = if incoming.name.trim().is_empty() {
             format!("providers/{}", uuid::Uuid::new_v4())
         } else {
             incoming.name.clone()
         };
 
-        let model = provider_entity::Model {
-            name: provider_name.clone(),
-            display_name: incoming.display_name,
-            api_key: incoming.api_key,
-            api_endpoint: incoming.api_endpoint,
-        };
+        let stored = provider_db::create_provider(
+            &self.db,
+            Provider {
+                name: provider_name,
+                display_name: incoming.display_name,
+                api_key: incoming.api_key,
+                api_endpoint: incoming.api_endpoint,
+            },
+        )
+        .await
+        .map_err(Self::map_db_error)?;
 
-        provider_db::create_provider(&self.db, model.clone())
-            .await
-            .map_err(Self::map_db_error)?;
+        info!(
+            "provider created successfully: provider_name={provider_name}",
+            provider_name = stored.name.as_str()
+        );
 
-        debug!("Created provider record: {provider_name}");
-
-        let provider_proto: Provider = model.into();
         let response = CreateProviderResponse {
-            provider: Some(Self::sanitize_provider(provider_proto)),
+            provider: Some(Self::sanitize_provider(stored)),
             status: Self::ok_status("provider created"),
         };
 
         Ok(Response::new(response))
     }
 
+    /// Fetches a provider by name and returns a sanitized representation.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The gRPC request specifying the provider name to retrieve.
+    ///
+    /// # Returns
+    ///
+    /// Returns a gRPC response containing the provider when found, or a not-found error otherwise.
     async fn get_provider(
         &self,
         request: Request<GetProviderRequest>,
@@ -125,25 +188,49 @@ impl ProviderService for MyProviderService {
             return Err(Status::invalid_argument("name must not be empty"));
         }
 
+        debug!(
+            "get_provider request received: provider_name={provider_name}",
+            provider_name = req.name.as_str()
+        );
+
         let provider = provider_db::get_provider(&self.db, &req.name)
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::not_found(format!("provider '{}' not found", req.name)))?;
 
-        let provider_proto: Provider = provider.into();
+        debug!(
+            "provider retrieved: provider_name={provider_name}",
+            provider_name = req.name.as_str()
+        );
+
         let response = GetProviderResponse {
-            provider: Some(Self::sanitize_provider(provider_proto)),
+            provider: Some(Self::sanitize_provider(provider)),
             status: Self::ok_status("provider retrieved"),
         };
 
         Ok(Response::new(response))
     }
 
+    /// Lists providers with optional pagination support.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The gRPC request containing pagination inputs.
+    ///
+    /// # Returns
+    ///
+    /// Returns a gRPC response with the sanitized providers list and the next page token when available.
     async fn list_providers(
         &self,
         request: Request<ListProvidersRequest>,
     ) -> Result<Response<ListProvidersResponse>, Status> {
         let req = request.into_inner();
+
+        debug!(
+            "list_providers request received: page_size={}, page_token='{}'",
+            req.page_size,
+            req.page_token.as_str()
+        );
 
         let page_size = if req.page_size <= 0 {
             None
@@ -161,13 +248,8 @@ impl ProviderService for MyProviderService {
                 .await
                 .map_err(Self::map_db_error)?;
 
-        let providers: Vec<Provider> = providers
-            .into_iter()
-            .map(|model| {
-                let proto: Provider = model.into();
-                Self::sanitize_provider(proto)
-            })
-            .collect();
+        let returned_count = providers.len();
+        let providers = providers.into_iter().map(Self::sanitize_provider).collect();
 
         let response = ListProvidersResponse {
             providers,
@@ -175,9 +257,20 @@ impl ProviderService for MyProviderService {
             status: Self::ok_status("providers listed"),
         };
 
+        debug!("list_providers response ready: provider_count={returned_count}");
+
         Ok(Response::new(response))
     }
 
+    /// Deletes a provider after confirming it exists.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The gRPC request identifying which provider to remove.
+    ///
+    /// # Returns
+    ///
+    /// Returns a gRPC response containing a success status, or an error if the provider is missing or deletion fails.
     async fn delete_provider(
         &self,
         request: Request<DeleteProviderRequest>,
@@ -186,6 +279,11 @@ impl ProviderService for MyProviderService {
         if req.name.trim().is_empty() {
             return Err(Status::invalid_argument("name must not be empty"));
         }
+
+        info!(
+            "delete_provider request received: provider_name={provider_name}",
+            provider_name = req.name.as_str()
+        );
 
         let existing = provider_db::get_provider(&self.db, &req.name)
             .await
@@ -196,6 +294,11 @@ impl ProviderService for MyProviderService {
             .await
             .map_err(Self::map_db_error)?;
 
+        info!(
+            "provider deleted: provider_name={provider_name}",
+            provider_name = existing.name.as_str()
+        );
+
         let response = DeleteProviderResponse {
             status: Self::ok_status("provider deleted"),
         };
@@ -203,6 +306,15 @@ impl ProviderService for MyProviderService {
         Ok(Response::new(response))
     }
 
+    /// Applies updates to an existing provider record based on the supplied field mask.
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The gRPC request containing the provider data and update mask.
+    ///
+    /// # Returns
+    ///
+    /// Returns a gRPC response with the updated provider or an error if validation or persistence fails.
     async fn update_provider(
         &self,
         request: Request<UpdateProviderRequest>,
@@ -223,31 +335,50 @@ impl ProviderService for MyProviderService {
 
         let mask_paths = req.update_mask.map(|mask| mask.paths).unwrap_or_default();
         let update_all = mask_paths.is_empty();
-
-        let desired: provider_entity::Model = incoming.into();
+        let has_update_mask = !mask_paths.is_empty();
+        info!(
+            "update_provider request received: provider_name={provider_name}, has_update_mask={has_update_mask}",
+            provider_name = incoming.name.as_str(),
+            has_update_mask = has_update_mask
+        );
 
         if update_all || mask_paths.iter().any(|path| path == "display_name") {
-            existing.display_name = desired.display_name.clone();
+            if incoming.display_name.trim().is_empty() {
+                return Err(Status::invalid_argument(
+                    "provider.display_name must not be empty",
+                ));
+            }
+            existing.display_name = incoming.display_name.clone();
         }
         if update_all || mask_paths.iter().any(|path| path == "api_key") {
-            existing.api_key = desired.api_key.clone();
+            if incoming.api_key.trim().is_empty() {
+                return Err(Status::invalid_argument(
+                    "provider.api_key must not be empty",
+                ));
+            }
+            existing.api_key = incoming.api_key.clone();
         }
         if update_all || mask_paths.iter().any(|path| path == "api_endpoint") {
-            existing.api_endpoint = desired.api_endpoint.clone();
+            if incoming.api_endpoint.trim().is_empty() {
+                return Err(Status::invalid_argument(
+                    "provider.api_endpoint must not be empty",
+                ));
+            }
+            existing.api_endpoint = incoming.api_endpoint.clone();
         }
 
-        provider_db::update_provider(&self.db, existing.clone())
-            .await
-            .map_err(Self::map_db_error)?;
-
-        let updated = provider_db::get_provider(&self.db, &existing.name)
+        let updated = provider_db::update_provider(&self.db, existing)
             .await
             .map_err(Self::map_db_error)?
             .ok_or_else(|| Status::internal("provider missing after update"))?;
 
-        let provider_proto: Provider = updated.into();
+        info!(
+            "provider updated successfully: provider_name={provider_name}",
+            provider_name = updated.name.as_str()
+        );
+
         let response = UpdateProviderResponse {
-            provider: Some(Self::sanitize_provider(provider_proto)),
+            provider: Some(Self::sanitize_provider(updated)),
             status: Self::ok_status("provider updated"),
         };
 
@@ -261,6 +392,15 @@ mod tests {
     use migration::MigratorTrait;
     use sapphillon_core::proto::google::protobuf::FieldMask;
 
+    /// Creates a provider service backed by an in-memory SQLite database for testing.
+    ///
+    /// # Arguments
+    ///
+    /// This helper takes no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns a [`MyProviderService`] connected to a temporary database.
     async fn setup_service() -> MyProviderService {
         let conn = sea_orm::Database::connect("sqlite::memory:?cache=shared")
             .await
@@ -272,6 +412,15 @@ mod tests {
         MyProviderService::new(conn)
     }
 
+    /// Tests creating, retrieving, and sanitizing a provider end-to-end.
+    ///
+    /// # Arguments
+    ///
+    /// This asynchronous test takes no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `()` once the round-trip assertions succeed.
     #[tokio::test]
     async fn create_and_get_provider_roundtrip() {
         let service = setup_service().await;
@@ -310,6 +459,15 @@ mod tests {
         assert_eq!(fetched_provider.display_name, "Test Provider");
     }
 
+    /// Validates update and list operations behave as expected for providers.
+    ///
+    /// # Arguments
+    ///
+    /// This asynchronous test takes no arguments.
+    ///
+    /// # Returns
+    ///
+    /// Returns `()` after the provider is updated, listed, and deleted successfully.
     #[tokio::test]
     async fn update_and_list_providers() {
         let service = setup_service().await;

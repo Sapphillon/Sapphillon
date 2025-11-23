@@ -27,10 +27,26 @@ use sapphillon_core::proto::sapphillon::v1::workflow_service_server::WorkflowSer
 use tonic::transport::Server;
 use tower_http::cors::CorsLayer;
 
+/// Boots the gRPC server, wiring service implementations and enabling web compatibility.
+///
+/// # Arguments
+///
+/// This asynchronous function takes no arguments.
+///
+/// # Returns
+///
+/// Returns `Ok(())` when the server shuts down cleanly or an error if any initialization step fails.
 pub async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse()?;
     let version_service = MyVersionService {};
-    let workflow_service = MyWorkflowService {};
+    let workflow_connection = crate::GLOBAL_STATE
+        .wait_init_and_get_connection()
+        .await
+        .map_err(|err| {
+            log::error!("Failed to obtain database connection for workflow service: {err:?}");
+            err
+        })?;
+    let workflow_service = MyWorkflowService::new(workflow_connection);
     let provider_connection = crate::GLOBAL_STATE
         .wait_init_and_get_connection()
         .await
