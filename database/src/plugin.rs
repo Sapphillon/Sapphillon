@@ -165,8 +165,8 @@ pub async fn init_register_plugins(
 
     let package_ids: Vec<String> = package_models.keys().cloned().collect();
     let function_ids: Vec<String> = function_models.keys().cloned().collect();
-    let package_values: Vec<plugin_package::Model> = package_models.into_values().collect();
-    let function_values: Vec<plugin_function::Model> = function_models.into_values().collect();
+    let package_values: Vec<plugin_package::Model> = package_models.values().cloned().collect();
+    let function_values: Vec<plugin_function::Model> = function_models.values().cloned().collect();
     let permission_entries: Vec<(PermissionKey, permission::Model)> =
         permission_models.into_iter().collect();
 
@@ -183,8 +183,9 @@ pub async fn init_register_plugins(
             .collect();
 
         let packages_to_insert: Vec<plugin_package::Model> = package_values
-            .into_iter()
+            .iter()
             .filter(|pkg| !existing_package_ids.contains(&pkg.package_id))
+            .cloned()
             .collect();
 
         if !packages_to_insert.is_empty() {
@@ -196,6 +197,57 @@ pub async fn init_register_plugins(
             plugin_package::Entity::insert_many(active_packages)
                 .exec(&txn)
                 .await?;
+        }
+        // Update existing packages if any fields differ.
+        // Build a map for incoming package models for quick access.
+        let mut incoming_packages: HashMap<String, plugin_package::Model> = HashMap::new();
+        for pkg in package_values.iter() {
+            incoming_packages.insert(pkg.package_id.clone(), pkg.clone());
+        }
+        // Re-query existing packages to get the actual records for comparison.
+        let existing_packages = plugin_package::Entity::find()
+            .filter(plugin_package::Column::PackageId.is_in(package_ids.clone()))
+            .all(&txn)
+            .await?;
+        for existing in existing_packages.into_iter() {
+            if let Some(incoming) = incoming_packages.get(&existing.package_id) {
+                // Determine if we need to update and which fields changed. Compute this
+                // while we still have `existing` available (before moving it).
+                let mut needs_update = false;
+                if existing.package_name != incoming.package_name {
+                    needs_update = true;
+                }
+                if existing.package_version != incoming.package_version {
+                    needs_update = true;
+                }
+                if existing.description.as_deref() != incoming.description.as_deref() {
+                    needs_update = true;
+                }
+                if existing.plugin_store_url.as_deref() != incoming.plugin_store_url.as_deref() {
+                    needs_update = true;
+                }
+                if existing.internal_plugin != incoming.internal_plugin {
+                    needs_update = true;
+                }
+                if existing.verified != incoming.verified {
+                    needs_update = true;
+                }
+                if existing.deprecated != incoming.deprecated {
+                    needs_update = true;
+                }
+                if needs_update {
+                    // Move existing into an ActiveModel only if we need to update it.
+                    let mut active: plugin_package::ActiveModel = existing.into();
+                    active.package_name = Set(incoming.package_name.clone());
+                    active.package_version = Set(incoming.package_version.clone());
+                    active.description = Set(incoming.description.clone());
+                    active.plugin_store_url = Set(incoming.plugin_store_url.clone());
+                    active.internal_plugin = Set(incoming.internal_plugin);
+                    active.verified = Set(incoming.verified);
+                    active.deprecated = Set(incoming.deprecated);
+                    plugin_package::Entity::update(active).exec(&txn).await?;
+                }
+            }
         }
     }
 
@@ -210,8 +262,9 @@ pub async fn init_register_plugins(
             .collect();
 
         let functions_to_insert: Vec<plugin_function::Model> = function_values
-            .into_iter()
+            .iter()
             .filter(|func| !existing_function_ids.contains(&func.function_id))
+            .cloned()
             .collect();
 
         if !functions_to_insert.is_empty() {
@@ -223,6 +276,40 @@ pub async fn init_register_plugins(
             plugin_function::Entity::insert_many(active_functions)
                 .exec(&txn)
                 .await?;
+        }
+        // Update existing functions if fields differ.
+        let existing_functions = plugin_function::Entity::find()
+            .filter(plugin_function::Column::FunctionId.is_in(function_ids.clone()))
+            .all(&txn)
+            .await?;
+        let mut incoming_functions: HashMap<String, plugin_function::Model> = HashMap::new();
+        for f in function_values.iter() {
+            incoming_functions.insert(f.function_id.clone(), f.clone());
+        }
+        for existing in existing_functions.into_iter() {
+            if let Some(incoming) = incoming_functions.get(&existing.function_id) {
+                let mut needs_update = false;
+                if existing.function_name != incoming.function_name {
+                    needs_update = true;
+                }
+                if existing.description.as_deref() != incoming.description.as_deref() {
+                    needs_update = true;
+                }
+                if existing.arguments.as_deref() != incoming.arguments.as_deref() {
+                    needs_update = true;
+                }
+                if existing.returns.as_deref() != incoming.returns.as_deref() {
+                    needs_update = true;
+                }
+                if needs_update {
+                    let mut active: plugin_function::ActiveModel = existing.into();
+                    active.function_name = Set(incoming.function_name.clone());
+                    active.description = Set(incoming.description.clone());
+                    active.arguments = Set(incoming.arguments.clone());
+                    active.returns = Set(incoming.returns.clone());
+                    plugin_function::Entity::update(active).exec(&txn).await?;
+                }
+            }
         }
     }
 
@@ -562,6 +649,80 @@ mod tests {
             pkg.functions.iter().map(|f| f.permissions.len()).collect();
         perm_counts.sort();
         assert_eq!(perm_counts, vec![1, 1]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_init_register_plugins_updates_on_diff() -> Result<(), sea_orm::DbErr> {
+        use sapphillon_core::proto::sapphillon::v1::{Permission, PermissionLevel, PermissionType, PluginFunction, PluginPackage};
+
+        let db = setup_db().await?;
+
+        let permission_proto = Permission {
+            display_name: "Network Access".to_string(),
+            description: "Allows outbound requests".to_string(),
+            permission_type: PermissionType::NetAccess as i32,
+            resource: vec!["https://example.com".to_string()],
+            permission_level: PermissionLevel::Medium as i32,
+        };
+
+        // initial function/package
+        let function_proto_initial = PluginFunction {
+            function_id: "pkg.fn".to_string(),
+            function_name: "Fn".to_string(),
+            description: "Example function".to_string(),
+            permissions: vec![permission_proto.clone()],
+            arguments: String::new(),
+            returns: String::new(),
+        };
+
+        let package_proto_initial = PluginPackage {
+            package_id: "pkg".to_string(),
+            package_name: "Pkg".to_string(),
+            package_version: "1.0.0".to_string(),
+            description: "Example package".to_string(),
+            functions: vec![function_proto_initial.clone()],
+            plugin_store_url: "builtin".to_string(),
+            internal_plugin: Some(true),
+            verified: Some(true),
+            deprecated: Some(false),
+            installed_at: None,
+            updated_at: None,
+        };
+
+        // register initial package
+        init_register_plugins(&db, vec![package_proto_initial.clone()]).await?;
+
+        // re-register with changed package_version and function description
+        let function_proto_changed = PluginFunction {
+            description: "Updated description".to_string(),
+            ..function_proto_initial
+        };
+
+        let package_proto_changed = PluginPackage {
+            package_version: "1.0.1".to_string(),
+            functions: vec![function_proto_changed.clone()],
+            ..package_proto_initial
+        };
+
+        init_register_plugins(&db, vec![package_proto_changed]).await?;
+
+        // Fetch the function and package records
+        let functions = entity::entity::plugin_function::Entity::find()
+            .all(&db)
+            .await?;
+        assert_eq!(functions.len(), 1);
+        // NOTE: current implementation does NOT perform updates, so this assertion reflects
+        // desired behavior (update should happen). If this test fails, behavior is the
+        // current 'insert-only' semantics.
+        assert_eq!(functions[0].description.as_deref(), Some("Updated description"));
+
+        let packages = entity::entity::plugin_package::Entity::find()
+            .all(&db)
+            .await?;
+        assert_eq!(packages.len(), 1);
+        assert_eq!(packages[0].package_version, "1.0.1");
 
         Ok(())
     }
