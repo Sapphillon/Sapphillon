@@ -214,4 +214,4 @@ jobs:
 
           # Optionally delete the tag as well to clean up completely
           echo "Deleting tag $TAG_NAME..."
-          git push --delete origin "$TAG_NAME" || echo "Failed to delete tag, or it was already deleted."
+          gh api -X DELETE /repos/${{ github.repository }}/git/refs/tags/$TAG_NAME || echo "Failed to delete tag, or it was already deleted."
