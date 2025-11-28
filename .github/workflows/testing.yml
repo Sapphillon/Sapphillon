@@ -23,7 +23,7 @@ jobs:
       matrix:
         os: [blacksmith-4vcpu-ubuntu-2404, macos-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -65,7 +65,7 @@ jobs:
     name: Rustfmt
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
