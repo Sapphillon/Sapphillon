@@ -134,7 +134,9 @@ fn op2_fetch(
     #[string] url: String,
 ) -> std::result::Result<String, JsErrorBox> {
     // Permission Check
-    permission_check(state, url.clone())?;
+    if let Err(e) = permission_check(state, url.clone()) {
+        return Ok(format!("Permission Denied: {}", e));
+    }
 
     match fetch(&url) {
         Ok(body) => Ok(body),
