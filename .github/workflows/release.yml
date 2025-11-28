@@ -1,24 +1,100 @@
 name: Release
 
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'The type of version bump to apply (major, minor, or patch)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - major
+        - minor
+        - patch
+      prerelease:
+        description: 'Whether this is a pre-release'
+        required: true
+        default: false
+        type: boolean
+
 permissions:
   contents: write
-
-on:
-  push:
-    tags:
-      - v*
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  Test:
+  test:
     uses: ./.github/workflows/testing.yml
     secrets:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
+  prepare:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.bump.outputs.new_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Setup SSH KNOWN_HOSTS
+        shell: bash
+        run: |
+          ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
+      - name: Bump version
+        id: bump
+        uses: tj-actions/cargo-bump@v3
+        with:
+          release_type: ${{ github.event.inputs.version_type }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Check if Cargo.toml was modified and commit if so
+      - name: Commit and Push Version Bump
+        run: |
+          git add Cargo.toml
+          # Check if there are changes to commit
+          if ! git diff-index --quiet HEAD; then
+             TAG_NAME="${{ steps.bump.outputs.new_tag }}"
+             git commit -m "chore: bump version to $TAG_NAME"
+             git push
+             # We also push the tag explicitly if cargo-bump didn't do it, but here we let gh release create handle the tag
+          fi
+
+      - name: Create Draft Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.bump.outputs.new_tag }}
+        run: |
+          PRERELEASE_FLAG=""
+          if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
+          # Create the release. This will create the tag at the current commit (which includes the bump).
+          gh release create "$TAG_NAME" \
+            --draft \
+            --title "Release $TAG_NAME" \
+            --generate-notes \
+            $PRERELEASE_FLAG
+
   build:
-    needs: [Test]
+    needs: prepare
     runs-on: ${{ matrix.runner }}
     env:
       PROJECT_NAME: Sapphillon-Controller
@@ -34,31 +110,20 @@ jobs:
             extension: ".exe"
             runner: windows-latest
             cross: false
-          # - target: x86_64-apple-darwin
-          #   extension: ""
-          #   runner: macos-latest
-          #   cross: false
           - target: aarch64-unknown-linux-gnu
             extension: ""
             runner: ubuntu-latest
             cross: true
-          # - target: aarch64-pc-windows-msvc
-          #   extension: ".exe"
-          #   runner: windows-latest
-          #   cross: false
           - target: aarch64-apple-darwin
             extension: ""
             runner: macos-latest
             cross: false
-          # - target: armv7-unknown-linux-gnueabihf
-          #   extension: ""
-          #   runner: ubuntu-latest
-          #   cross: true
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
-
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag_name }}
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -81,7 +146,13 @@ jobs:
       - name: Install Dependencies on MacOS
         if: runner.os == 'macOS'
         run: |
-            brew install make
+            brew install make protobuf
+
+      - name: Install Dependencies on Linux
+        if: runner.os == 'Linux'
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y protobuf-compiler
 
       - name: Install cross (if needed)
         if: ${{ matrix.cross }}
@@ -91,6 +162,7 @@ jobs:
         if: ${{ matrix.cross }}
         run: |
             cross build --workspace --release --target ${{ matrix.target }} --verbose
+
       - name: Build Project
         if: ${{ !matrix.cross }}
         run: |
@@ -100,12 +172,46 @@ jobs:
       - name: Rename Artifacts
         shell: bash
         run: |
-          mv target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}{,-${{ github.ref_name }}-${{ matrix.target }}${{ matrix.extension }}}
+          # Use the tag name in the artifact name
+          TAG_NAME="${{ needs.prepare.outputs.tag_name }}"
+          mv target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}{,-${TAG_NAME}-${{ matrix.target }}${{ matrix.extension }}}
 
-      - name: Release Artifacts
-        uses: softprops/action-gh-release@v2
+      - name: Upload Artifacts to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: |
-            target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}-${{ github.ref_name }}-${{ matrix.target }}${{ matrix.extension }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+        shell: bash
+        run: |
+          FILE_PATH="target/${{ matrix.target }}/release/${{ env.PROJECT_NAME }}-${TAG_NAME}-${{ matrix.target }}${{ matrix.extension }}"
+          gh release upload "$TAG_NAME" "$FILE_PATH"
+
+  finalize:
+    needs: [prepare, build]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Publish Release (Success)
+        if: needs.build.result == 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+        run: |
+          echo "All builds succeeded. Publishing release..."
+          gh release edit "$TAG_NAME" --draft=false
+
+      - name: Delete Release (Failure)
+        if: needs.build.result != 'success'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.prepare.outputs.tag_name }}
+        run: |
+          echo "Builds failed (status: ${{ needs.build.result }}). Deleting draft release..."
+          # Delete the release
+          gh release delete "$TAG_NAME" --yes
+
+          # Optionally delete the tag as well to clean up completely
+          echo "Deleting tag $TAG_NAME..."
+          git push --delete origin "$TAG_NAME" || echo "Failed to delete tag, or it was already deleted."
