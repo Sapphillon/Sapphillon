@@ -59,10 +59,9 @@ jobs:
 
       - name: Bump version
         id: bump
-        uses: tj-actions/cargo-bump@v3
-        with:
-          release_type: ${{ github.event.inputs.version_type }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+           NEW_TAG=$(python3 scripts/bump_version.py ${{ github.event.inputs.version_type }})
+           echo "new_tag=${NEW_TAG}" >> "$GITHUB_OUTPUT"
 
       # Check if Cargo.toml was modified and commit if so
       - name: Commit and Push Version Bump
