@@ -1,13 +1,12 @@
 [package]
 name = "fetch"
 version.workspace = true
+edition.workspace = true
 authors.workspace = true
-license-file.workspace = true
-readme = "README.md"
+license.workspace = true
+readme.workspace = true
 repository.workspace = true
 homepage.workspace = true
-
-edition = "2024"
 
 [dependencies]
 anyhow.workspace = true
