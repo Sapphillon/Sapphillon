@@ -1,12 +1,7 @@
 // Sapphillon
 // SPDX-FileCopyrightText: 2025 Yuta Takahashi
 // SPDX-License-Identifier: MPL-2.0 OR GPL-3.0-or-later
-// Sapphillon
-//
-//
-//
-//
-//
+
 use deno_core::{OpState, op2};
 use deno_error::JsErrorBox;
 use sapphillon_core::permission::{

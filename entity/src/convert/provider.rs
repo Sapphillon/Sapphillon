@@ -1,11 +1,6 @@
 // Sapphillon
 // SPDX-FileCopyrightText: 2025 Yuta Takahashi
 // SPDX-License-Identifier: MPL-2.0 OR GPL-3.0-or-later
-// Sapphillon
-//
-//
-//
-//
 
 use crate::entity::provider::Model as EntityProvider;
 use sapphillon_core::proto::sapphillon::ai::v1::Provider as ProtoProvider;

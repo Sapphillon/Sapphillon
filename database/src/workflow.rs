@@ -1,11 +1,6 @@
 // Sapphillon
 // SPDX-FileCopyrightText: 2025 Yuta Takahashi
 // SPDX-License-Identifier: MPL-2.0 OR GPL-3.0-or-later
-// Sapphillon
-//
-//
-//
-//
 
 pub mod workflow_code_allowed_permission_crud;
 pub mod workflow_code_crud;

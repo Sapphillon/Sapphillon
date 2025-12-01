@@ -1,17 +1,13 @@
+// Sapphillon
+// SPDX-FileCopyrightText: 2025 Yuta Takahashi
+// SPDX-License-Identifier: MPL-2.0 OR GPL-3.0-or-later
+
 use sapphillon_core::plugin::CorePluginPackage;
 use sapphillon_core::proto::sapphillon::v1::PluginPackage;
 
 use fetch::{core_fetch_plugin_package, fetch_plugin_package};
 use filesystem::{core_filesystem_plugin_package, filesystem_plugin_package};
 
-// Sapphillon
-// SPDX-FileCopyrightText: 2025 Yuta Takahashi
-// SPDX-License-Identifier: MPL-2.0 OR GPL-3.0-or-later
-// Sapphillon
-//
-//
-//
-//
 
 /// Builds the static system configuration used during application startup.
 ///

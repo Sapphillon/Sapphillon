@@ -1,11 +1,6 @@
 // Sapphillon
 // SPDX-FileCopyrightText: 2025 Yuta Takahashi
 // SPDX-License-Identifier: MPL-2.0 OR GPL-3.0-or-later
-// Sapphillon
-//
-//
-//
-//
 
 use super::plugin_code::{
     plugin_package_to_proto, proto_string_to_option, proto_timestamp_to_datetime,
