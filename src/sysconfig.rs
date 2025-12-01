@@ -8,7 +8,6 @@ use sapphillon_core::proto::sapphillon::v1::PluginPackage;
 use fetch::{core_fetch_plugin_package, fetch_plugin_package};
 use filesystem::{core_filesystem_plugin_package, filesystem_plugin_package};
 
-
 /// Builds the static system configuration used during application startup.
 ///
 /// # Arguments
