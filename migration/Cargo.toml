@@ -1,7 +1,12 @@
 [package]
 name = "migration"
 version.workspace = true
-edition = "2021"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+homepage.workspace = true
 publish = false
 
 [lib]

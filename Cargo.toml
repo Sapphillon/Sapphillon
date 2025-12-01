@@ -4,7 +4,7 @@
 version = "0.8.0"
 edition = "2024"
 authors = ["Yuuta Takahashi <y.highbridge04@gmail.com>"]
-license-file = "LICENSE"
+license = "MPL-2.0 OR GPL-3.0-or-later"
 readme = "README.md"
 repository = "https://github.com/Walkmana-25/Sapphillon"
 homepage = "https://github.com/Walkmana-25/Sapphillon"
@@ -50,7 +50,7 @@ name = "Sapphillon-Controller"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license-file.workspace = true
+license.workspace = true
 readme.workspace = true
 repository.workspace = true
 homepage.workspace = true
