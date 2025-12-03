@@ -562,7 +562,7 @@ mod tests {
             file1.to_str().unwrap().to_string(),
             file2.to_str().unwrap().to_string(),
         ];
-        let mut actual_files: Vec<String> = serde_json::from_str(actual.trim_end()).unwrap();
+        let actual_files: Vec<String> = serde_json::from_str(actual.trim_end()).unwrap();
 
         expected_files.iter().for_each(|f| {
             assert!(actual_files.contains(f));
@@ -598,10 +598,10 @@ mod tests {
         );
 
         workflow.run();
-        assert_eq!(workflow.result.len(), 0);
+        assert_eq!(workflow.result.len(), 1);
         assert!(
-            workflow
-                .error
+            workflow.result[0]
+                .result
                 .to_string()
                 .contains("PermissionDenied. Missing Permissions:")
         );
