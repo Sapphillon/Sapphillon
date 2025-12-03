@@ -168,17 +168,13 @@ fn op2_post(
 }
 
 fn fetch(url: &str) -> anyhow::Result<String> {
-    let agent = ureq::builder()
-        .timeout(Duration::from_secs(30))
-        .build();
+    let agent = ureq::builder().timeout(Duration::from_secs(30)).build();
     let body = agent.get(url).call()?.into_string()?;
     Ok(body)
 }
 
 fn post(url: &str, body: &str) -> anyhow::Result<String> {
-    let agent = ureq::builder()
-        .timeout(Duration::from_secs(30))
-        .build();
+    let agent = ureq::builder().timeout(Duration::from_secs(30)).build();
     let body = agent.post(url).send_string(body)?.into_string()?;
     Ok(body)
 }
