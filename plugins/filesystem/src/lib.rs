@@ -408,12 +408,8 @@ mod tests {
         let s = res.unwrap();
         let files: Vec<String> = serde_json::from_str(&s).unwrap();
         assert_eq!(files.len(), 2);
-        assert!(files
-            .iter()
-            .any(|f| f == file1_path.to_str().unwrap()));
-        assert!(files
-            .iter()
-            .any(|f| f == file2_path.to_str().unwrap()));
+        assert!(files.iter().any(|f| f == file1_path.to_str().unwrap()));
+        assert!(files.iter().any(|f| f == file2_path.to_str().unwrap()));
     }
 
     #[test]
@@ -566,8 +562,7 @@ mod tests {
             file1.to_str().unwrap().to_string(),
             file2.to_str().unwrap().to_string(),
         ];
-        let mut actual_files: Vec<String> =
-            serde_json::from_str(actual.trim_end()).unwrap();
+        let mut actual_files: Vec<String> = serde_json::from_str(actual.trim_end()).unwrap();
 
         expected_files.iter().for_each(|f| {
             assert!(actual_files.contains(f));
@@ -604,9 +599,11 @@ mod tests {
 
         workflow.run();
         assert_eq!(workflow.result.len(), 0);
-        assert!(workflow
-            .error
-            .to_string()
-            .contains("PermissionDenied. Missing Permissions:"));
+        assert!(
+            workflow
+                .error
+                .to_string()
+                .contains("PermissionDenied. Missing Permissions:")
+        );
     }
 }
