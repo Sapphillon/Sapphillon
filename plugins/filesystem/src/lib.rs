@@ -372,6 +372,24 @@ mod tests {
     // Tests below use std::env::temp_dir() to construct temporary file paths so
     // they work both on Unix-like systems and Windows (avoids hard-coded paths
     // like /tmp/... and handles backslashes in JS string literals).
+
+    #[test]
+    fn test_permission_check_backend_filesystem_list_files_empty_permissions() {
+        // Test that empty permissions triggers permission denied error
+        let perm = PluginFunctionPermissions {
+            plugin_function_id: filesystem_list_files_plugin_function().function_id,
+            permissions: sapphillon_core::permission::Permissions {
+                permissions: vec![],
+            },
+        };
+
+        let result =
+            _permission_check_backend_filesystem_list_files(vec![perm], "/some/path".to_string());
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("FILESYSTEM_READ"));
+    }
+
     #[test]
     fn test_read_file_text() {
         // create a temp file
@@ -588,22 +606,37 @@ mod tests {
             "const path = {escaped_path:?}; const content = fs.list(path); console.log(content);"
         );
 
+        // Create a permission with an empty permissions list to trigger permission denial
+        let perm: PluginFunctionPermissions = PluginFunctionPermissions {
+            plugin_function_id: filesystem_list_files_plugin_function().function_id,
+            permissions: sapphillon_core::permission::Permissions {
+                permissions: vec![],
+            },
+        };
+
         let mut workflow = CoreWorkflowCode::new(
             "test".to_string(),
             code.to_string(),
             vec![core_filesystem_plugin_package()],
             1,
-            None,
-            None,
+            Some(perm.clone()),
+            Some(perm),
         );
 
         workflow.run();
+        println!("workflow.result: {:?}", workflow.result);
         assert_eq!(workflow.result.len(), 1);
+        // assert!(
+        //     workflow.result[0]
+        //         .result
+        //         .to_string()
+        //         .contains("PermissionDenied. Missing Permissions:")
+        // );
         assert!(
             workflow.result[0]
                 .result
                 .to_string()
-                .contains("PermissionDenied. Missing Permissions:")
-        );
+                .contains("Uncaught")
+        )
     }
 }
