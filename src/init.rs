@@ -52,8 +52,8 @@ async fn setup_database() -> Result<()> {
     }
 
     // If DB path is no db files, create the db file
-    if let Some(ref path) = db_path {
-        if path != ":memory:" && !std::path::Path::new(path).exists() {
+    match db_path.as_deref() {
+        Some(path) if path != ":memory:" && !std::path::Path::new(path).exists() => {
             info!("Database file does not exist. Creating new database at: {path}");
             match std::fs::File::create(path) {
                 Ok(_) => info!("Database file created successfully."),
@@ -63,6 +63,7 @@ async fn setup_database() -> Result<()> {
                 }
             }
         }
+        _ => {}
     }
 
     let database_connection =
