@@ -99,6 +99,7 @@ fn _permission_check_backend(
             .into_iter()
             .find(|p| {
                 p.plugin_function_id == fetch_plugin_function().function_id
+                    || p.plugin_function_id == post_plugin_function().function_id
                     || p.plugin_function_id == "*"
             })
             .map(|p| p.permissions)
@@ -117,7 +118,6 @@ fn _permission_check_backend(
         )),
     }
 }
-
 fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> {
     let data = state
         .borrow::<Arc<Mutex<OpStateWorkflowData>>>()
@@ -125,12 +125,20 @@ fn permission_check(state: &mut OpState, url: String) -> Result<(), JsErrorBox> 
         .unwrap();
     let allowed = match &data.get_allowed_permissions() {
         Some(p) => p,
-        None => &vec![PluginFunctionPermissions {
-            plugin_function_id: fetch_plugin_function().function_id,
-            permissions: sapphillon_core::permission::Permissions {
-                permissions: fetch_plugin_permissions(),
+        None => &vec![
+            PluginFunctionPermissions {
+                plugin_function_id: fetch_plugin_function().function_id,
+                permissions: sapphillon_core::permission::Permissions {
+                    permissions: fetch_plugin_permissions(),
+                },
             },
-        }],
+            PluginFunctionPermissions {
+                plugin_function_id: post_plugin_function().function_id,
+                permissions: sapphillon_core::permission::Permissions {
+                    permissions: fetch_plugin_permissions(),
+                },
+            },
+        ],
     };
     _permission_check_backend(allowed.clone(), url)?;
     Ok(())
@@ -168,19 +176,21 @@ fn op2_post(
 }
 
 fn fetch(url: &str) -> anyhow::Result<String> {
-    let agent = ureq::AgentBuilder::new()
-        .timeout(Duration::from_secs(30))
-        .build();
-    let body = agent.get(url).call()?.into_string()?;
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_global(Some(Duration::from_secs(30)))
+        .build()
+        .into();
+    let body = agent.get(url).call()?.body_mut().read_to_string()?;
     Ok(body)
 }
 
 fn post(url: &str, body: &str) -> anyhow::Result<String> {
-    let agent = ureq::AgentBuilder::new()
-        .timeout(Duration::from_secs(30))
-        .build();
-    let body = agent.post(url).send_string(body)?.into_string()?;
-    Ok(body)
+    let agent: ureq::Agent = ureq::Agent::config_builder()
+        .timeout_global(Some(Duration::from_secs(30)))
+        .build()
+        .into();
+    let response_body = agent.post(url).send(body)?.body_mut().read_to_string()?;
+    Ok(response_body)
 }
 
 fn fetch_plugin_permissions() -> Vec<Permission> {
@@ -307,7 +317,7 @@ mod tests {
     fn test_post_in_workflow() {
         let code = r#"
             const url = "https://dummyjson.com/products/add";
-            const response = post(url, "{\"title\":\"test\"}");
+            const response = post(url, '{"title":"test"}');
             console.log(response);
         "#;
 
