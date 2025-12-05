@@ -13,6 +13,7 @@ dependencies = [
  "database",
  "entity",
  "env_logger",
+ "exec",
  "fetch",
  "filesystem",
  "log",
@@ -1321,6 +1322,17 @@ dependencies = [
  "futures-core",
  "nom",
  "pin-project-lite",
+]
+
+[[package]]
+name = "exec"
+version = "0.8.0"
+dependencies = [
+ "anyhow",
+ "deno_core",
+ "deno_error",
+ "log",
+ "sapphillon_core",
 ]
 
 [[package]]
