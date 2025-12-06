@@ -197,17 +197,18 @@ mod tests {
         fs::write(dir.path().join("subdir/file2.log"), "world").unwrap();
         fs::write(dir.path().join("another.file"), "test").unwrap();
 
+        // Use WalkdirSearcher directly since native search APIs don't index temp directories.
+        // The OnceLock in get_searcher() would cause cross-test pollution if Windows Search
+        // API is selected, which doesn't work well with temporary directories.
+        let searcher = WalkdirSearcher::new();
+
         // Search for a file that exists.
-        // Note: Native searchers may not index temp directories, so this test
-        // primarily exercises the walkdir fallback.
-        let result = search_file_logic(dir_path.clone(), "file1".to_string()).unwrap();
-        let results: Vec<String> = serde_json::from_str(&result).unwrap();
+        let results = searcher.search(&dir_path, "file1").unwrap();
         assert_eq!(results.len(), 1);
         assert!(results[0].contains("file1.txt"));
 
         // Search for a file that doesn't exist.
-        let result = search_file_logic(dir_path, "nonexistent".to_string()).unwrap();
-        let results: Vec<String> = serde_json::from_str(&result).unwrap();
+        let results = searcher.search(&dir_path, "nonexistent").unwrap();
         assert_eq!(results.len(), 0);
     }
 
