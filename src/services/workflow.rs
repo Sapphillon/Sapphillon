@@ -224,7 +224,10 @@ impl MyWorkflowService {
 
     fn build_core_permissions(
         workflow_code: &WorkflowCode,
-    ) -> (Vec<PluginFunctionPermissions>, Vec<PluginFunctionPermissions>) {
+    ) -> (
+        Vec<PluginFunctionPermissions>,
+        Vec<PluginFunctionPermissions>,
+    ) {
         let allowed_permissions = if workflow_code.allowed_permissions.is_empty() {
             if let Some(first_id) = workflow_code.plugin_function_ids.first() {
                 vec![PluginFunctionPermissions {
@@ -738,11 +741,11 @@ impl WorkflowService for MyWorkflowService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sapphillon_core::permission::{CheckPermissionResult, check_permission};
     use sapphillon_core::proto::google::protobuf::Timestamp;
     use sapphillon_core::proto::sapphillon::v1::{
         Permission, PermissionLevel, PermissionType, WorkflowResultType,
     };
-    use sapphillon_core::permission::{check_permission, CheckPermissionResult};
     use tonic::Code;
 
     fn base_timestamp() -> Timestamp {
@@ -938,6 +941,9 @@ mod tests {
 
         // func2 is missing, should be denied
         let denied = check_permission(&granted_for_func1, &required_func2);
-        assert!(matches!(denied, CheckPermissionResult::MissingPermission(_)));
+        assert!(matches!(
+            denied,
+            CheckPermissionResult::MissingPermission(_)
+        ));
     }
 }

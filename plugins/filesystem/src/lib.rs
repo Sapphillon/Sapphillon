@@ -367,8 +367,8 @@ mod tests {
     use super::*;
     use sapphillon_core::proto::sapphillon::v1::PermissionType;
     use sapphillon_core::workflow::CoreWorkflowCode;
-    use std::io::Write;
     use serial_test::serial;
+    use std::io::Write;
 
     // Tests below use std::env::temp_dir() to construct temporary file paths so
     // they work both on Unix-like systems and Windows (avoids hard-coded paths
