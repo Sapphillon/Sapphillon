@@ -739,7 +739,10 @@ impl WorkflowService for MyWorkflowService {
 mod tests {
     use super::*;
     use sapphillon_core::proto::google::protobuf::Timestamp;
-    use sapphillon_core::proto::sapphillon::v1::WorkflowResultType;
+    use sapphillon_core::proto::sapphillon::v1::{
+        Permission, PermissionLevel, PermissionType, WorkflowResultType,
+    };
+    use sapphillon_core::permission::{check_permission, CheckPermissionResult};
     use tonic::Code;
 
     fn base_timestamp() -> Timestamp {
@@ -843,5 +846,98 @@ mod tests {
         let mask = vec!["unsupported".to_string()];
         let err = MyWorkflowService::apply_update_mask(&existing, &incoming, &mask).unwrap_err();
         assert_eq!(err.code(), Code::InvalidArgument);
+    }
+
+    #[test]
+    fn build_core_permissions_preserves_multiple_permissions() {
+        let mut workflow = base_workflow();
+        let workflow_code = workflow
+            .workflow_code
+            .get_mut(0)
+            .expect("base workflow has at least one code");
+
+        workflow_code.plugin_function_ids = vec!["func1".to_string(), "func2".to_string()];
+        workflow_code.allowed_permissions = vec![
+            AllowedPermission {
+                plugin_function_id: "func1".to_string(),
+                permissions: vec![Permission {
+                    display_name: "p1".to_string(),
+                    description: "d1".to_string(),
+                    permission_type: PermissionType::NetAccess as i32,
+                    permission_level: PermissionLevel::Unspecified as i32,
+                    resource: vec!["r1".to_string()],
+                }],
+            },
+            AllowedPermission {
+                plugin_function_id: "func2".to_string(),
+                permissions: vec![Permission {
+                    display_name: "p2".to_string(),
+                    description: "d2".to_string(),
+                    permission_type: PermissionType::FilesystemRead as i32,
+                    permission_level: PermissionLevel::Unspecified as i32,
+                    resource: vec!["r2".to_string()],
+                }],
+            },
+        ];
+
+        let (required, allowed) = MyWorkflowService::build_core_permissions(workflow_code);
+
+        assert_eq!(required.len(), 2);
+        assert_eq!(allowed.len(), 2);
+        assert_eq!(required[0].plugin_function_id, "func1");
+        assert_eq!(required[1].plugin_function_id, "func2");
+        assert_eq!(allowed[0].plugin_function_id, "func1");
+        assert_eq!(allowed[1].plugin_function_id, "func2");
+
+        assert_eq!(required[0].permissions.permissions.len(), 1);
+        assert_eq!(required[1].permissions.permissions.len(), 1);
+    }
+
+    #[test]
+    fn missing_allowed_permission_results_in_denial() {
+        let mut workflow = base_workflow();
+        let workflow_code = workflow
+            .workflow_code
+            .get_mut(0)
+            .expect("base workflow has at least one code");
+
+        workflow_code.plugin_function_ids = vec!["func1".to_string(), "func2".to_string()];
+        workflow_code.allowed_permissions = vec![
+            AllowedPermission {
+                plugin_function_id: "func1".to_string(),
+                permissions: vec![Permission {
+                    display_name: "p1".to_string(),
+                    description: "d1".to_string(),
+                    permission_type: PermissionType::NetAccess as i32,
+                    permission_level: PermissionLevel::Unspecified as i32,
+                    resource: vec!["r1".to_string()],
+                }],
+            },
+            AllowedPermission {
+                plugin_function_id: "func2".to_string(),
+                permissions: vec![Permission {
+                    display_name: "p2".to_string(),
+                    description: "d2".to_string(),
+                    permission_type: PermissionType::FilesystemRead as i32,
+                    permission_level: PermissionLevel::Unspecified as i32,
+                    resource: vec!["r2".to_string()],
+                }],
+            },
+        ];
+
+        let (required, allowed) = MyWorkflowService::build_core_permissions(workflow_code);
+
+        // Only grant permissions for func1, omit func2
+        let granted_for_func1 = allowed[0].permissions.clone();
+        let required_func1 = required[0].permissions.clone();
+        let required_func2 = required[1].permissions.clone();
+
+        // func1 is permitted
+        let ok = check_permission(&granted_for_func1, &required_func1);
+        assert!(matches!(ok, CheckPermissionResult::Ok));
+
+        // func2 is missing, should be denied
+        let denied = check_permission(&granted_for_func1, &required_func2);
+        assert!(matches!(denied, CheckPermissionResult::MissingPermission(_)));
     }
 }
