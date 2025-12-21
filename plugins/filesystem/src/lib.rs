@@ -66,7 +66,7 @@ pub fn core_filesystem_read_plugin() -> CorePluginFunction {
         "ReadFile".to_string(),
         "Reads a text file from the local filesystem and returns its contents as a string."
             .to_string(),
-        op2_filesystem_read(),
+        op2_filesystem_read,
         Some(include_str!("00_filesystem.js").to_string()),
     )
 }
@@ -459,13 +459,14 @@ mod tests {
             },
         };
 
+        let workflow_permissions = vec![perm.clone()];
         let mut workflow = CoreWorkflowCode::new(
             "test".to_string(),
             code.to_string(),
             vec![core_filesystem_plugin_package()],
             1,
-            Some(perm.clone()),
-            Some(perm),
+            workflow_permissions.clone(),
+            workflow_permissions,
         );
 
         workflow.run();
@@ -506,13 +507,14 @@ mod tests {
             },
         };
 
+        let workflow_permissions = vec![perm.clone()];
         let mut workflow = CoreWorkflowCode::new(
             "test-write".to_string(),
             code.to_string(),
             vec![core_filesystem_plugin_package()],
             1,
-            Some(perm.clone()),
-            Some(perm),
+            workflow_permissions.clone(),
+            workflow_permissions,
         );
 
         workflow.run();
@@ -561,13 +563,14 @@ mod tests {
             },
         };
 
+        let workflow_permissions = vec![perm.clone()];
         let mut workflow = CoreWorkflowCode::new(
             "test".to_string(),
             code.to_string(),
             vec![core_filesystem_plugin_package()],
             1,
-            Some(perm.clone()),
-            Some(perm),
+            workflow_permissions.clone(),
+            workflow_permissions,
         );
 
         workflow.run();
@@ -614,13 +617,14 @@ mod tests {
             },
         };
 
+        let workflow_permissions = vec![perm.clone()];
         let mut workflow = CoreWorkflowCode::new(
             "test".to_string(),
             code.to_string(),
             vec![core_filesystem_plugin_package()],
             1,
-            Some(perm.clone()),
-            Some(perm),
+            workflow_permissions.clone(),
+            workflow_permissions,
         );
 
         workflow.run();

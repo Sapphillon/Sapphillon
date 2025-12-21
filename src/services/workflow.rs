@@ -224,24 +224,26 @@ impl MyWorkflowService {
 
     fn build_core_permissions(
         workflow_code: &WorkflowCode,
-    ) -> (
-        Option<PluginFunctionPermissions>,
-        Option<PluginFunctionPermissions>,
-    ) {
-        if workflow_code.allowed_permissions.is_empty() {
+    ) -> (Vec<PluginFunctionPermissions>, Vec<PluginFunctionPermissions>) {
+        let allowed_permissions = if workflow_code.allowed_permissions.is_empty() {
             if let Some(first_id) = workflow_code.plugin_function_ids.first() {
-                let perms = PluginFunctionPermissions {
+                vec![PluginFunctionPermissions {
                     plugin_function_id: first_id.clone(),
                     permissions: Permissions::new(vec![]),
-                };
-                (Some(perms.clone()), Some(perms))
+                }]
             } else {
-                (None, None)
+                Vec::new()
             }
         } else {
-            let perms = Self::make_plugin_permission(&workflow_code.allowed_permissions[0]);
-            (Some(perms.clone()), Some(perms))
-        }
+            workflow_code
+                .allowed_permissions
+                .iter()
+                .map(Self::make_plugin_permission)
+                .collect()
+        };
+
+        let required_permissions = allowed_permissions.clone();
+        (required_permissions, allowed_permissions)
     }
 }
 
