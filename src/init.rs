@@ -103,11 +103,18 @@ async fn register_initial_workflows() -> Result<()> {
     let config = crate::sysconfig::sysconfig();
 
     for wf_def in config.initial_workflows {
-        // Check if workflow with this display_name already exists
-        let exists = entity::entity::workflow::Entity::find()
-            .filter(entity::entity::workflow::Column::DisplayName.eq(&wf_def.display_name))
-            .one(&db)
-            .await?;
+        // Prefer a stable workflow identifier for idempotent detection, fall back to display_name.
+        let exists = if !wf_def.workflow_id.is_empty() {
+            entity::entity::workflow::Entity::find()
+                .filter(entity::entity::workflow::Column::WorkflowId.eq(&wf_def.workflow_id))
+                .one(&db)
+                .await?
+        } else {
+            entity::entity::workflow::Entity::find()
+                .filter(entity::entity::workflow::Column::DisplayName.eq(&wf_def.display_name))
+                .one(&db)
+                .await?
+        };
 
         if exists.is_none() {
             info!("Registering initial workflow: {}", wf_def.display_name);
