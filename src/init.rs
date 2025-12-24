@@ -125,8 +125,8 @@ async fn register_initial_workflows() -> Result<()> {
                 &db,
                 wf_def.code.clone(),
                 wf.id,
-                vec![], // No initial plugins
-                vec![],
+                vec![], // No initial plugin functions
+                vec![], // No initial plugin packages
             )
             .await?;
         }
