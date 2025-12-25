@@ -387,8 +387,7 @@ pub async fn init_register_plugins(
 mod tests {
     use super::*;
     use sea_orm::{
-        ActiveModelTrait, ConnectionTrait, DatabaseConnection, DbBackend, EntityTrait,
-        Statement,
+        ActiveModelTrait, ConnectionTrait, DatabaseConnection, DbBackend, EntityTrait, Statement,
     };
 
     async fn setup_db() -> Result<DatabaseConnection, sea_orm::DbErr> {

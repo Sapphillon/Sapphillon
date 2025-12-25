@@ -58,9 +58,7 @@ pub async fn delete_model(db: &DatabaseConnection, name: &str) -> Result<bool, D
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sea_orm::{
-        ActiveModelTrait, ConnectionTrait, DatabaseConnection, DbBackend, Statement,
-    };
+    use sea_orm::{ActiveModelTrait, ConnectionTrait, DatabaseConnection, DbBackend, Statement};
 
     async fn setup_db() -> Result<DatabaseConnection, DbErr> {
         let state = crate::global_state_for_tests!();
