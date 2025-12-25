@@ -4,10 +4,11 @@
 
 use deno_core::{op2, OpState};
 use deno_error::JsErrorBox;
-use sapphillon_core::permission::{permission_check, PluginFunctionPermissions};
+use sapphillon_core::permission::{check_permission, CheckPermissionResult, Permissions};
 use sapphillon_core::plugin::{CorePluginFunction, CorePluginPackage};
 use sapphillon_core::proto::sapphillon::v1::{
-    Permission, PermissionLevel, PermissionType, PluginFunction, PluginPackage,
+    FunctionDefine, FunctionParameter, Permission, PermissionLevel, PermissionType,
+    PluginFunction, PluginPackage,
 };
 use sapphillon_core::runtime::OpStateWorkflowData;
 use std::process::Command;
@@ -19,8 +20,18 @@ pub fn exec_plugin_function() -> PluginFunction {
         function_name: "Exec".to_string(),
         description: "Executes a command in the default shell and returns its output.".to_string(),
         permissions: exec_plugin_permissions(),
-        arguments: "String: command".to_string(),
-        returns: "String: output".to_string(),
+        function_define: Some(FunctionDefine {
+            parameters: vec![FunctionParameter {
+                name: "command".to_string(),
+                r#type: "string".to_string(),
+                description: "Shell command to execute".to_string(),
+            }],
+            returns: vec![FunctionParameter {
+                name: "output".to_string(),
+                r#type: "string".to_string(),
+                description: "Stdout from the executed command".to_string(),
+            }],
+        }),
     }
 }
 
@@ -64,7 +75,7 @@ fn op2_exec(
     state: &mut OpState,
     #[string] command: String,
 ) -> std::result::Result<String, JsErrorBox> {
-    permission_check(
+    ensure_permission(
         state,
         &exec_plugin_function().function_id,
         exec_plugin_permissions(),
@@ -96,6 +107,44 @@ fn exec(command: &str) -> anyhow::Result<String> {
     }
 }
 
+fn ensure_permission(
+    state: &mut OpState,
+    plugin_function_id: &str,
+    required_permissions: Vec<Permission>,
+    resource: &str,
+) -> Result<(), JsErrorBox> {
+    let data = state
+        .borrow::<Arc<Mutex<OpStateWorkflowData>>>()
+        .lock()
+        .unwrap();
+    let allowed = data.get_allowed_permissions().clone().unwrap_or_default();
+
+    let required_permissions = Permissions::new(
+        required_permissions
+            .into_iter()
+            .map(|mut p| {
+                if !resource.is_empty() && p.resource.is_empty() {
+                    p.resource = vec![resource.to_string()];
+                }
+                p
+            })
+            .collect(),
+    );
+
+    let allowed_permissions = allowed
+        .into_iter()
+        .find(|p| p.plugin_function_id == plugin_function_id || p.plugin_function_id == "*")
+        .map(|p| p.permissions)
+        .unwrap_or_else(|| Permissions::new(vec![]));
+
+    match check_permission(&allowed_permissions, &required_permissions) {
+        CheckPermissionResult::Ok => Ok(()),
+        CheckPermissionResult::MissingPermission(perm) => Err(JsErrorBox::new(
+            "PermissionDenied. Missing Permissions:",
+            perm.to_string(),
+        )),
+    }
+}
 fn exec_plugin_permissions() -> Vec<Permission> {
     vec![Permission {
         display_name: "Command Access".to_string(),
@@ -109,6 +158,7 @@ fn exec_plugin_permissions() -> Vec<Permission> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sapphillon_core::permission::PluginFunctionPermissions;
     use sapphillon_core::workflow::CoreWorkflowCode;
 
     #[test]

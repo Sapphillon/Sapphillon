@@ -5,10 +5,11 @@
 // Filesystem plugin - provides simple text file IO (read) with permission checks
 use deno_core::{op2, OpState};
 use deno_error::JsErrorBox;
-use sapphillon_core::permission::{permission_check, PluginFunctionPermissions};
+use sapphillon_core::permission::{check_permission, CheckPermissionResult, Permissions};
 use sapphillon_core::plugin::{CorePluginFunction, CorePluginPackage};
 use sapphillon_core::proto::sapphillon::v1::{
-    Permission, PermissionLevel, PermissionType, PluginFunction, PluginPackage,
+    FunctionDefine, FunctionParameter, Permission, PermissionLevel, PermissionType,
+    PluginFunction, PluginPackage,
 };
 use sapphillon_core::runtime::OpStateWorkflowData;
 use std::fs;
@@ -22,8 +23,18 @@ pub fn filesystem_read_plugin_function() -> PluginFunction {
             "Reads a text file from the local filesystem and returns its contents as a string."
                 .to_string(),
         permissions: filesystem_read_plugin_permissions(),
-        arguments: "String: path".to_string(),
-        returns: "String: content".to_string(),
+        function_define: Some(FunctionDefine {
+            parameters: vec![FunctionParameter {
+                name: "path".to_string(),
+                r#type: "string".to_string(),
+                description: "File path to read".to_string(),
+            }],
+            returns: vec![FunctionParameter {
+                name: "content".to_string(),
+                r#type: "string".to_string(),
+                description: "File contents".to_string(),
+            }],
+        }),
     }
 }
 
@@ -33,8 +44,18 @@ pub fn filesystem_list_files_plugin_function() -> PluginFunction {
         function_name: "fs.list".to_string(),
         description: "List files in a directory.".to_string(),
         permissions: filesystem_list_files_plugin_permissions(),
-        arguments: "String: path".to_string(),
-        returns: "String: content".to_string(),
+        function_define: Some(FunctionDefine {
+            parameters: vec![FunctionParameter {
+                name: "path".to_string(),
+                r#type: "string".to_string(),
+                description: "Directory path".to_string(),
+            }],
+            returns: vec![FunctionParameter {
+                name: "content".to_string(),
+                r#type: "string".to_string(),
+                description: "JSON array of file paths".to_string(),
+            }],
+        }),
     }
 }
 
@@ -97,8 +118,25 @@ pub fn filesystem_write_plugin_function() -> PluginFunction {
         function_name: "WriteFile".to_string(),
         description: "Writes text to a file on the local filesystem.".to_string(),
         permissions: filesystem_write_plugin_permissions(),
-        arguments: "String: path, String: content".to_string(),
-        returns: "String: result".to_string(),
+        function_define: Some(FunctionDefine {
+            parameters: vec![
+                FunctionParameter {
+                    name: "path".to_string(),
+                    r#type: "string".to_string(),
+                    description: "File path to write".to_string(),
+                },
+                FunctionParameter {
+                    name: "content".to_string(),
+                    r#type: "string".to_string(),
+                    description: "File contents to write".to_string(),
+                },
+            ],
+            returns: vec![FunctionParameter {
+                name: "result".to_string(),
+                r#type: "string".to_string(),
+                description: "Operation result".to_string(),
+            }],
+        }),
     }
 }
 
@@ -120,7 +158,7 @@ fn op2_filesystem_write(
     #[string] content: String,
 ) -> std::result::Result<String, JsErrorBox> {
     // Permission check
-    permission_check(
+    ensure_permission(
         state,
         &filesystem_write_plugin_function().function_id,
         filesystem_write_plugin_permissions(),
@@ -140,7 +178,7 @@ fn op2_filesystem_list_files(
     #[string] path: String,
 ) -> std::result::Result<String, JsErrorBox> {
     // Permission check
-    permission_check(
+    ensure_permission(
         state,
         &filesystem_list_files_plugin_function().function_id,
         filesystem_list_files_plugin_permissions(),
@@ -193,7 +231,7 @@ fn op2_filesystem_read(
     #[string] path: String,
 ) -> std::result::Result<String, JsErrorBox> {
     // Permission check
-    permission_check(
+    ensure_permission(
         state,
         &filesystem_read_plugin_function().function_id,
         filesystem_read_plugin_permissions(),
@@ -221,9 +259,49 @@ fn filesystem_read_plugin_permissions() -> Vec<Permission> {
     }]
 }
 
+fn ensure_permission(
+    state: &mut OpState,
+    plugin_function_id: &str,
+    required_permissions: Vec<Permission>,
+    resource: &str,
+) -> Result<(), JsErrorBox> {
+    let data = state
+        .borrow::<Arc<Mutex<OpStateWorkflowData>>>()
+        .lock()
+        .unwrap();
+    let allowed = data.get_allowed_permissions().clone().unwrap_or_default();
+
+    let required_permissions = Permissions::new(
+        required_permissions
+            .into_iter()
+            .map(|mut p| {
+                if !resource.is_empty() && p.resource.is_empty() {
+                    p.resource = vec![resource.to_string()];
+                }
+                p
+            })
+            .collect(),
+    );
+
+    let allowed_permissions = allowed
+        .into_iter()
+        .find(|p| p.plugin_function_id == plugin_function_id || p.plugin_function_id == "*")
+        .map(|p| p.permissions)
+        .unwrap_or_else(|| Permissions::new(vec![]));
+
+    match check_permission(&allowed_permissions, &required_permissions) {
+        CheckPermissionResult::Ok => Ok(()),
+        CheckPermissionResult::MissingPermission(perm) => Err(JsErrorBox::new(
+            "PermissionDenied. Missing Permissions:",
+            perm.to_string(),
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sapphillon_core::permission::PluginFunctionPermissions;
     use sapphillon_core::proto::sapphillon::v1::PermissionType;
     use sapphillon_core::workflow::CoreWorkflowCode;
     use serial_test::serial;
