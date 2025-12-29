@@ -2,14 +2,19 @@
     const { core } = Deno;
     const { ops } = core;
 
-    const PACKAGE_ID = "app.sapphillon.core.search";
+    const PACKAGE_ID = "app.sapphillon.core.window";
 
-    function file(root_path, query) {
-        return ops.op2_search_file(root_path, query);
+    function get_active_window_title() {
+        return ops.op2_get_active_window_title();
+    }
+
+    function get_inactive_window_titles() {
+        return ops.op2_get_inactive_window_titles();
     }
 
     const functions = {
-        file,
+        get_active_window_title,
+        get_inactive_window_titles,
     };
 
     let a = PACKAGE_ID.split("."), o = globalThis;
