@@ -15,6 +15,7 @@ impl From<EntityModel> for ProtoModel {
             display_name: entity.display_name,
             description: entity.description,
             provider_name: entity.provider_name,
+            priority: None, // EntityModel doesn't have priority; defaults to None
         }
     }
 }
