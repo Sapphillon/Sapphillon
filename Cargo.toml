@@ -98,3 +98,6 @@ tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 
 [build-dependencies]
 tonic-build.workspace = true
+
+[patch.crates-io]
+sqlx = {git = "https://github.com/Walkmana-25/sqlx-patch.git"}
