@@ -134,6 +134,14 @@ CREATE TABLE workflow_code_allowed_permission (
     FOREIGN KEY (workflow_code_id) REFERENCES workflow_code(id) ON DELETE CASCADE,
     FOREIGN KEY (permission_id) REFERENCES permission(id) ON DELETE CASCADE
 );
+
+-- ext_plugin_package
+-- Tracks externally installed plugin packages from the filesystem.
+CREATE TABLE ext_plugin_package (
+    plugin_package_id TEXT NOT NULL PRIMARY KEY,
+    install_dir TEXT NOT NULL,
+    missing BOOLEAN NOT NULL DEFAULT FALSE
+);
 */
 use sea_orm_migration::{prelude::*, schema::*};
 
@@ -605,10 +613,45 @@ impl MigrationTrait for Migration {
                     )
                     .to_owned(),
             )
+            .await?;
+
+        // External Plugin Package table
+        manager
+            .create_table(
+                Table::create()
+                    .table(ExtPluginPackage::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(ExtPluginPackage::PluginPackageId)
+                            .string()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(ExtPluginPackage::InstallDir)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(ExtPluginPackage::Missing)
+                            .boolean()
+                            .not_null()
+                            .default(false),
+                    )
+                    .to_owned(),
+            )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(
+                Table::drop()
+                    .table(ExtPluginPackage::Table)
+                    .to_owned(),
+            )
+            .await?;
+
         manager
             .drop_table(
                 Table::drop()
@@ -808,4 +851,13 @@ enum WorkflowCodeAllowedPermission {
     Id,
     WorkflowCodeId,
     PermissionId,
+}
+
+// ------ External Plugin Related Tables -------
+#[derive(DeriveIden)]
+enum ExtPluginPackage {
+    Table,
+    PluginPackageId,
+    InstallDir,
+    Missing,
 }
