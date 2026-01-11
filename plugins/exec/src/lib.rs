@@ -177,6 +177,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_exec_in_workflow() {
         let code = r#"
             const output = app.sapphillon.core.exec.exec("echo test_workflow");
@@ -213,6 +214,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_permission_error_in_workflow() {
         let code = r#"
             app.sapphillon.core.exec.exec("echo should_fail");

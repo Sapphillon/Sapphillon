@@ -248,6 +248,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_permission_error() {
         let code = r#"
             const url = "https://dummyjson.com/test";
@@ -291,6 +292,7 @@ mod tests {
         );
     }
     #[tokio::test]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_fetch_in_workflow() {
         let code = r#"
             const url = "https://dummyjson.com/test";
@@ -334,6 +336,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_post_in_workflow() {
         let code = r#"
             const url = "https://dummyjson.com/products/add";

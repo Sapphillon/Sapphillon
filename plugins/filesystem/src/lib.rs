@@ -360,6 +360,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_permission_in_workflow() {
         // Create a platform-appropriate temp path and write the file
         let mut tmp_path_buf = std::env::temp_dir();
@@ -410,6 +411,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_permission_write_in_workflow() {
         // Ensure file does not exist then grant permission
         let mut tmp_path_buf = std::env::temp_dir();
@@ -466,6 +468,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_permission_list_files_in_workflow() {
         // Create a directory and some files in it
         let tmp_dir = tempfile::tempdir().unwrap();
@@ -526,6 +529,7 @@ mod tests {
 
     #[tokio::test]
     #[serial]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_permission_denied_list_files_in_workflow() {
         // Create a directory and some files in it
         let tmp_dir = tempfile::tempdir().unwrap();

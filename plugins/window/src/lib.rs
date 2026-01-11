@@ -207,6 +207,7 @@ mod tests {
     use sapphillon_core::workflow::CoreWorkflowCode;
 
     #[tokio::test]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_get_active_window_title_in_workflow() {
         let code = r#"
             const title = app.sapphillon.core.window.getActiveWindowTitle();
@@ -238,6 +239,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::arc_with_non_send_sync)]
     async fn test_get_inactive_window_titles_in_workflow() {
         let code = r#"
             const titles = app.sapphillon.core.window.getInactiveWindowTitles();
