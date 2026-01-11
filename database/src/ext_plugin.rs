@@ -8,8 +8,8 @@
 //! installed from the filesystem and tracked in the database.
 
 use entity::entity::ext_plugin_package::{self, ActiveModel, Entity as ExtPluginPackage, Model};
-use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 use sea_orm::ActiveValue::Set;
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter};
 
 /// Creates a new external plugin package record in the database.
 ///

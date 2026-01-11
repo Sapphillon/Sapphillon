@@ -191,10 +191,7 @@ async fn sync_ext_plugins() -> Result<()> {
             // Plugin exists on filesystem - ensure not marked as missing
             if db_plugin.missing {
                 mark_ext_plugin_missing(&db, &db_plugin.plugin_package_id, false).await?;
-                info!(
-                    "External plugin recovered: {}",
-                    db_plugin.plugin_package_id
-                );
+                info!("External plugin recovered: {}", db_plugin.plugin_package_id);
             }
             synced_count += 1;
         } else {

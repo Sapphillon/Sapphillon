@@ -48,10 +48,7 @@ pub async fn install_ext_plugin(
     // Check if plugin already exists
     let existing = get_ext_plugin_package(db, &plugin_package_id).await?;
     if existing.is_some() {
-        anyhow::bail!(
-            "External plugin already installed: {}",
-            plugin_package_id
-        );
+        anyhow::bail!("External plugin already installed: {}", plugin_package_id);
     }
 
     // Create directory structure
@@ -89,10 +86,7 @@ pub async fn install_ext_plugin(
 /// # Returns
 ///
 /// Returns `Ok(())` on success.
-pub async fn uninstall_ext_plugin(
-    db: &DatabaseConnection,
-    plugin_package_id: &str,
-) -> Result<()> {
+pub async fn uninstall_ext_plugin(db: &DatabaseConnection, plugin_package_id: &str) -> Result<()> {
     use database::ext_plugin::{delete_ext_plugin_package, get_ext_plugin_package};
 
     // Get the plugin record
@@ -103,8 +97,9 @@ pub async fn uninstall_ext_plugin(
     // Remove files from filesystem
     let install_path = Path::new(&plugin.install_dir);
     if install_path.exists() {
-        fs::remove_dir_all(install_path)
-            .with_context(|| format!("Failed to remove plugin directory: {}", plugin.install_dir))?;
+        fs::remove_dir_all(install_path).with_context(|| {
+            format!("Failed to remove plugin directory: {}", plugin.install_dir)
+        })?;
 
         // Try to clean up empty parent directories
         cleanup_empty_parent_dirs(install_path);
@@ -113,7 +108,12 @@ pub async fn uninstall_ext_plugin(
     // Remove from database
     delete_ext_plugin_package(db, plugin_package_id)
         .await
-        .with_context(|| format!("Failed to delete plugin from database: {}", plugin_package_id))?;
+        .with_context(|| {
+            format!(
+                "Failed to delete plugin from database: {}",
+                plugin_package_id
+            )
+        })?;
 
     log::info!("Uninstalled external plugin: {}", plugin_package_id);
 
@@ -125,7 +125,12 @@ fn cleanup_empty_parent_dirs(path: &Path) {
     let mut current = path.parent();
     for _ in 0..3 {
         if let Some(parent) = current {
-            if parent.exists() && parent.read_dir().map(|mut d| d.next().is_none()).unwrap_or(false) {
+            if parent.exists()
+                && parent
+                    .read_dir()
+                    .map(|mut d| d.next().is_none())
+                    .unwrap_or(false)
+            {
                 if fs::remove_dir(parent).is_err() {
                     break;
                 }
@@ -258,22 +263,19 @@ mod tests {
         let save_dir = temp_dir.path().to_string_lossy().to_string();
 
         // Install first time
-        install_ext_plugin(
-            &db,
-            &save_dir,
-            "author",
-            "pkg",
-            "1.0.0",
-            b"content",
-        )
-        .await?;
+        install_ext_plugin(&db, &save_dir, "author", "pkg", "1.0.0", b"content").await?;
 
         // Try to install again
-        let result = install_ext_plugin(&db, &save_dir, "author", "pkg", "1.0.0", b"new content")
-            .await;
+        let result =
+            install_ext_plugin(&db, &save_dir, "author", "pkg", "1.0.0", b"new content").await;
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("already installed"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("already installed")
+        );
 
         Ok(())
     }
