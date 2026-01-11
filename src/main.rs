@@ -7,6 +7,7 @@ mod dummy_plugin;
 #[allow(unused)]
 mod ext_plugin_manager;
 mod init;
+mod plugin_installer;
 mod server;
 mod services;
 mod workflow;
