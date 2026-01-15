@@ -1,4 +1,4 @@
-.PHONY: rust_test, rust_build, rust_check_format, rust_fix_format, gen_empty_db, migrate_generate, entity_generate
+.PHONY: rust_test, rust_build, rust_check_format, rust_fix_format, gen_empty_db, migrate_generate, entity_generate, run, grpcui, migrate
 
 rust_test:
 	@echo "Run Rust Tests"
@@ -65,7 +65,7 @@ run:
 	@echo "auto make dubug folder and put system data."
 	@echo "----------------------------------------------------------"
 	mkdir -p ./debug/plugins
-	cargo run -- --loglevel debug --db-url ./debug/sqlite.db --ext-plugin-save-dir ./debug/plugins start
+	cargo run -- --loglevel debug --db-url "sqlite://./debug/sqlite.db" --ext-plugin-save-dir ./debug/plugins start
 	@echo "----------------------------------------------------------"
 
 grpcui:
