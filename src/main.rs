@@ -98,15 +98,8 @@ async fn main() -> Result<()> {
             // Start debug workflow scanner in debug builds only
             #[cfg(debug_assertions)]
             {
-                std::thread::spawn(|| {
-                    let rt = tokio::runtime::Builder::new_current_thread()
-                        .enable_all()
-                        .build()
-                        .expect("Failed to create debug workflow runtime");
-                    let local = tokio::task::LocalSet::new();
-                    local.block_on(&rt, async {
-                        debug_workflow::start_debug_workflow_scanner().await;
-                    });
+                tokio::spawn(async {
+                    debug_workflow::start_debug_workflow_scanner().await;
                 });
             }
 

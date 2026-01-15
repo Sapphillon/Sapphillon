@@ -24,21 +24,21 @@ This repository generated from <https://github.com/Walkmana-25/rust-actions-exam
 
 ## Debug Workflow (Debug Build Only)
 
-Debugビルド時のみ有効になる機能で、`debug_workflow` ディレクトリ内のJavaScriptファイルを定期的にスキャンして自動実行します。
+This feature is only enabled in debug builds. It periodically scans the `debug_workflow` directory for JavaScript files and automatically registers them to the database.
 
-### 機能
+### Features
 
-- **定期スキャン**: 10秒間隔で `debug_workflow` ディレクトリをスキャン
-- **全権限付与**: デバッグワークフローには全てのプラグインへのアクセス権限が付与されます
-- **自動実行**: 検出されたJSファイルは自動的にワークフローとして実行されます
+- **Periodic Scan**: Scans the `debug_workflow` directory every 10 seconds
+- **Full Permissions**: Debug workflows are granted access to all plugins
+- **Auto-Registration**: Detected JS files are automatically registered as workflows in the database
 
-### 使用方法
+### Usage
 
-1. `debug_workflow` ディレクトリにJavaScriptファイルを配置
-2. Debugビルドでアプリケーションを起動 (`cargo run`)
-3. ログに実行結果が出力されます
+1. Place JavaScript files in the `debug_workflow` directory
+2. Run the application with a debug build (`cargo run`)
+3. Workflows will be registered with the `[DEBUG]` prefix in the database
 
-### サンプル
+### Sample
 
 ```javascript
 // debug_workflow/test.js
@@ -50,4 +50,4 @@ function workflow() {
 workflow();
 ```
 
-> **注意**: この機能はDebugビルドでのみ有効です。Releaseビルド (`cargo build --release`) では無効化されます。
+> **Note**: This feature is only available in debug builds. It is disabled in release builds (`cargo build --release`).
