@@ -25,3 +25,5 @@ db
 
 # Ignore Debug Folder
 debug/
+
+debug_workflow/**.js
