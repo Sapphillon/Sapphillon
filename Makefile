@@ -60,4 +60,16 @@ entity_generate:
 	sea-orm-cli generate entity -u "sqlite://db/sqlite.db" -o ./entity/src/entity
 	@echo "----------------------------------------------------------"
 
+run:
+	@echo "Run the Rust Application"
+	@echo "auto make dubug folder and put system data."
+	@echo "----------------------------------------------------------"
+	mkdir -p ./debug/plugins
+	cargo run -- --loglevel debug --db-url ./debug/sqlite.db --ext-plugin-save-dir ./debug/plugins start
+	@echo "----------------------------------------------------------"
 
+grpcui:
+	@echo "Run gRPC UI for the Rust Application"
+	@echo "----------------------------------------------------------"
+	grpcui -plaintext localhost:50051
+	@echo "----------------------------------------------------------"
