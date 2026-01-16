@@ -695,7 +695,7 @@ impl WorkflowService for MyWorkflowService {
                 allowed_permissions,
             );
 
-            workflow_core.run(Handle::current());
+            workflow_core.run(Handle::current(), None, None);
 
             if workflow_core.result.is_empty() {
                 return Err(Status::internal("workflow execution produced no result"));

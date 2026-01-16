@@ -4084,8 +4084,8 @@ dependencies = [
 
 [[package]]
 name = "ext_plugin"
-version = "0.13.0"
-source = "git+ssh://git@github.com/Sapphillon/Sapphillon-Core.git?tag=v0.13.0#bd1af319ae978e099354ff39825503e7d24b26ab"
+version = "0.14.0"
+source = "git+ssh://git@github.com/Sapphillon/Sapphillon-Core.git?tag=v0.14.0#b3ddb143ca45e60000c93cadf597d8521cd784d3"
 dependencies = [
  "anyhow",
  "deno_core",
@@ -7449,7 +7449,7 @@ version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac6c3320f9abac597dcbc668774ef006702672474aad53c6d596b62e487b40b1"
 dependencies = [
- "heck 0.5.0",
+ "heck 0.4.1",
  "itertools 0.14.0",
  "log",
  "multimap",
@@ -7501,7 +7501,7 @@ dependencies = [
 [[package]]
 name = "proto"
 version = "0.10.0"
-source = "git+ssh://git@github.com/Sapphillon/Sapphillon-Core.git?tag=v0.13.0#bd1af319ae978e099354ff39825503e7d24b26ab"
+source = "git+ssh://git@github.com/Sapphillon/Sapphillon-Core.git?tag=v0.14.0#b3ddb143ca45e60000c93cadf597d8521cd784d3"
 dependencies = [
  "bytes",
  "pbjson",
@@ -8407,8 +8407,8 @@ dependencies = [
 
 [[package]]
 name = "sapphillon_core"
-version = "0.13.0"
-source = "git+ssh://git@github.com/Sapphillon/Sapphillon-Core.git?tag=v0.13.0#bd1af319ae978e099354ff39825503e7d24b26ab"
+version = "0.14.0"
+source = "git+ssh://git@github.com/Sapphillon/Sapphillon-Core.git?tag=v0.14.0#b3ddb143ca45e60000c93cadf597d8521cd784d3"
 dependencies = [
  "anyhow",
  "async-trait",
