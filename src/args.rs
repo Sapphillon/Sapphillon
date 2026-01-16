@@ -104,7 +104,7 @@ pub enum Command {
     
     #[command(hide = true)]
     /// Run the External Plugin Server
-    ExtPluginServer {
+    Ext {
         /// Name of the external plugin server to register.
         #[arg(value_name = "SERVER_NAME")]
         server_name: String,
