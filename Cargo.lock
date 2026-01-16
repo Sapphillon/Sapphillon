@@ -14,6 +14,7 @@ dependencies = [
  "entity",
  "env_logger",
  "exec",
+ "ext_plugin",
  "fetch",
  "filesystem",
  "log",
