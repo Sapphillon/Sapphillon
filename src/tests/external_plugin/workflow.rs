@@ -57,12 +57,14 @@ fn test_workflow_with_external_plugin_add() {
         vec![],
     );
 
-    let tokio_runtime = tokio::runtime::Runtime::new().unwrap();
+    // 既存のランタイムハンドルを取得
+    let handle = tokio::runtime::Handle::try_current()
+        .expect("Tokio runtime must be available");
 
     let external_package_runner_path = get_debug_binary_path();
 
     code.run(
-        tokio_runtime.handle().clone(),
+        handle.clone(),
         external_package_runner_path,
         Some(vec!["ext".to_string()]),
     );
@@ -120,12 +122,14 @@ fn test_workflow_with_external_plugin_process_data() {
         vec![],
     );
 
-    let tokio_runtime = tokio::runtime::Runtime::new().unwrap();
+    // 既存のランタイムハンドルを取得
+    let handle = tokio::runtime::Handle::try_current()
+        .expect("Tokio runtime must be available");
 
     let external_package_runner_path = get_debug_binary_path();
 
     code.run(
-        tokio_runtime.handle().clone(),
+        handle.clone(),
         external_package_runner_path,
         Some(vec!["ext".to_string()]),
     );
@@ -187,12 +191,14 @@ fn test_workflow_without_permission_requirement() {
         vec![],
     );
 
-    let tokio_runtime = tokio::runtime::Runtime::new().unwrap();
+    // 既存のランタイムハンドルを取得
+    let handle = tokio::runtime::Handle::try_current()
+        .expect("Tokio runtime must be available");
 
     let external_package_runner_path = get_debug_binary_path();
 
     code.run(
-        tokio_runtime.handle().clone(),
+        handle.clone(),
         external_package_runner_path,
         Some(vec!["ext".to_string()]),
     );
@@ -270,12 +276,14 @@ fn test_multiple_plugins_in_workflow() {
         vec![],
     );
 
-    let tokio_runtime = tokio::runtime::Runtime::new().unwrap();
+    // 既存のランタイムハンドルを取得
+    let handle = tokio::runtime::Handle::try_current()
+        .expect("Tokio runtime must be available");
 
     let external_package_runner_path = get_debug_binary_path();
 
     code.run(
-        tokio_runtime.handle().clone(),
+        handle.clone(),
         external_package_runner_path,
         Some(vec!["ext".to_string()]),
     );

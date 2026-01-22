@@ -84,12 +84,14 @@ fn test_complete_install_load_execute_flow() {
         vec![],
     );
 
-    let tokio_runtime = tokio::runtime::Runtime::new().unwrap();
+    // 既存のランタイムハンドルを取得
+    let handle = tokio::runtime::Handle::try_current()
+        .expect("Tokio runtime must be available");
 
     let external_package_runner_path = get_debug_binary_path();
 
     code.run(
-        tokio_runtime.handle().clone(),
+        handle.clone(),
         external_package_runner_path,
         Some(vec!["ext".to_string()]),
     );
@@ -180,8 +182,10 @@ globalThis.Sapphillon = {
         vec![],
     );
 
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    code_v1.run(rt.handle().clone(), None, None);
+    // 既存のランタイムハンドルを取得
+    let handle = tokio::runtime::Handle::try_current()
+        .expect("Tokio runtime must be available");
+    code_v1.run(handle.clone(), None, None);
 
     assert!(
         code_v1.result[0].result.contains("20"),
@@ -247,8 +251,10 @@ globalThis.Sapphillon = {
         vec![],
     );
 
-    let rt2 = tokio::runtime::Runtime::new().unwrap();
-    code_v2.run(rt2.handle().clone(), None, None);
+    // 既存のランタイムハンドルを取得
+    let handle = tokio::runtime::Handle::try_current()
+        .expect("Tokio runtime must be available");
+    code_v2.run(handle.clone(), None, None);
 
     assert!(
         code_v2.result[0].result.contains("30"),

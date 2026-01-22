@@ -63,6 +63,9 @@ pub fn get_debug_binary_path() -> Option<String> {
 
     let base_name = file_name.split('-').next().unwrap_or(&file_name);
 
+    // アンダースコアをハイフンに置換（Rustの命名規則に対処）
+    let base_name = base_name.replace('_', "-");
+
     let final_path = std::path::Path::new(&debug_path)
         .parent()?
         .join(base_name);
@@ -102,13 +105,13 @@ pub fn create_temp_plugin(
 }
 
 /// Creates OpState with workflow data containing the test external package.
-/// Returns the OpState and the tokio Runtime to keep the runtime alive.
+/// Returns the OpState and the tokio Runtime handle.
 #[allow(dead_code)]
 pub fn create_opstate_with_package(
     package_js: &str,
     package_name: &str,
     author_id: &str,
-) -> (deno_core::OpState, tokio::runtime::Runtime) {
+) -> (deno_core::OpState, tokio::runtime::Handle) {
     let mut op_state = deno_core::OpState::new(None);
 
     // Create the external package
@@ -124,13 +127,16 @@ pub fn create_opstate_with_package(
     // Create OpStateWorkflowData with the external package
     let external_package_runner_path = get_debug_binary_path();
 
-    let tokio_runtime = tokio::runtime::Runtime::new().unwrap();
+    // 既存のランタイムハンドルを取得
+    let handle = tokio::runtime::Handle::try_current()
+        .expect("Tokio runtime must be available");
+
     let workflow_data = OpStateWorkflowData::new(
         "test_workflow",
         false,
         None,
         None,
-        tokio_runtime.handle().clone(),
+        handle.clone(),
         vec![Arc::new(package)],
         external_package_runner_path,
         Some(vec!["ext".to_string()]),
@@ -139,7 +145,7 @@ pub fn create_opstate_with_package(
     // Put workflow data into OpState
     op_state.put(Arc::new(Mutex::new(workflow_data)));
 
-    (op_state, tokio_runtime)
+    (op_state, handle)
 }
 
 /// Helper function to scan a directory for installed plugins.
