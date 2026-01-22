@@ -34,7 +34,6 @@
 
 mod bridge;
 mod common;
-mod debug;
 mod e2e;
 mod installation;
 mod workflow;
