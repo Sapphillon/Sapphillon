@@ -10,39 +10,39 @@ globalThis.Sapphillon = {
         functions: {
             read_file: {
                 description: "Reads a file (requires FilesystemRead permission)",
-                permissions: [{
-                    type: "FilesystemRead",
-                    level: 1,
-                    display_name: "Filesystem Read",
-                    description: "Read access to filesystem",
-                    resource: []
-                }],
+                permissions: [
+                    {
+                        type: "FilesystemRead",
+                        resource: "/tmp/test.txt"
+                    }
+                ],
                 parameters: [
-                    { idx: 0, name: "path", type: "string", description: "File path to read" }
+                    { idx: 0, name: "path", type: "string", description: "File path" }
                 ],
                 returns: [{
                     idx: 0,
                     type: "string",
-                    description: "File contents"
+                    description: "File content"
                 }],
-                handler: async (path) => {
-                    const content = await Deno.readTextFile(path);
-                    return content;
+                handler: (path) => {
+                    console.log(`[JS] Reading file: ${path}`);
+                    return Deno.readTextFileSync(path);
                 }
             },
             simple_function: {
-                description: "A simple function that requires no permissions",
+                description: "A simple function without permission requirements",
                 permissions: [],
                 parameters: [
-                    { idx: 0, name: "message", type: "string", description: "Message to echo" }
+                    { idx: 0, name: "text", type: "string", description: "Text to echo" }
                 ],
                 returns: [{
                     idx: 0,
                     type: "string",
-                    description: "Echoed message"
+                    description: "Echoed text"
                 }],
-                handler: (message) => {
-                    return `Echo: ${message}`;
+                handler: (text) => {
+                    console.log(`[JS] Echo: ${text}`);
+                    return `Echo: ${text}`;
                 }
             }
         }
