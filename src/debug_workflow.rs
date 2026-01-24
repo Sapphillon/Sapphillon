@@ -86,9 +86,7 @@ pub struct DebugWorkflowFile {
 /// or an error if directory reading fails.
 pub fn scan_debug_workflow_dir() -> Result<Vec<DebugWorkflowFile>> {
     let dir_path = Path::new(DEBUG_WORKFLOW_DIR);
-    eprintln!(
-        "[scan_debug_workflow_dir] DEBUG_WORKFLOW_DIR: {DEBUG_WORKFLOW_DIR}"
-    );
+    eprintln!("[scan_debug_workflow_dir] DEBUG_WORKFLOW_DIR: {DEBUG_WORKFLOW_DIR}");
     eprintln!("[scan_debug_workflow_dir] dir_path: {dir_path:?}");
     eprintln!(
         "[scan_debug_workflow_dir] dir_path.exists(): {}",
@@ -113,9 +111,7 @@ pub fn scan_debug_workflow_dir() -> Result<Vec<DebugWorkflowFile>> {
             entries
         }
         Err(e) => {
-            eprintln!(
-                "[scan_debug_workflow_dir] Failed to read directory: {e:?}"
-            );
+            eprintln!("[scan_debug_workflow_dir] Failed to read directory: {e:?}");
             eprintln!("[scan_debug_workflow_dir] Error kind: {:?}", e.kind());
             return Err(e.into());
         }
@@ -143,9 +139,7 @@ pub fn scan_debug_workflow_dir() -> Result<Vec<DebugWorkflowFile>> {
             let code = match fs::read_to_string(&path) {
                 Ok(c) => c,
                 Err(e) => {
-                    eprintln!(
-                        "[scan_debug_workflow_dir] Failed to read file {path:?}: {e:?}"
-                    );
+                    eprintln!("[scan_debug_workflow_dir] Failed to read file {path:?}: {e:?}");
                     return Err(e.into());
                 }
             };
@@ -336,15 +330,11 @@ mod tests {
         std::env::set_current_dir(temp_dir.path()).unwrap();
 
         let current_dir_after_change = std::env::current_dir().unwrap();
-        eprintln!(
-            "Current directory after change: {current_dir_after_change:?}"
-        );
+        eprintln!("Current directory after change: {current_dir_after_change:?}");
         eprintln!("DEBUG_WORKFLOW_DIR constant: {DEBUG_WORKFLOW_DIR}");
 
         let debug_workflow_path = Path::new(DEBUG_WORKFLOW_DIR);
-        eprintln!(
-            "Debug workflow path from constant: {debug_workflow_path:?}"
-        );
+        eprintln!("Debug workflow path from constant: {debug_workflow_path:?}");
         eprintln!(
             "Debug workflow path exists: {}",
             debug_workflow_path.exists()
