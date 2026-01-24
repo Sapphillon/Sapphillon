@@ -29,8 +29,7 @@ fn test_plugin_installation_creates_directory_structure() {
     // Verify the file was created
     assert!(
         package_js_path.exists(),
-        "package.js should exist at {:?}",
-        package_js_path
+        "package.js should exist at {package_js_path:?}"
     );
 
     // Verify the content

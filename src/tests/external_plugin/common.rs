@@ -66,9 +66,7 @@ pub fn get_debug_binary_path() -> Option<String> {
     // アンダースコアをハイフンに置換（Rustの命名規則に対処）
     let base_name = base_name.replace('_', "-");
 
-    let final_path = std::path::Path::new(&debug_path)
-        .parent()?
-        .join(base_name);
+    let final_path = std::path::Path::new(&debug_path).parent()?.join(base_name);
 
     Some(final_path.to_string_lossy().into_owned())
 }
@@ -77,7 +75,7 @@ pub fn get_debug_binary_path() -> Option<String> {
 pub fn read_fixture(filename: &str) -> String {
     let path = get_fixture_path(filename);
     std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("Failed to read fixture {}: {}", filename, e))
+        .unwrap_or_else(|e| panic!("Failed to read fixture {filename}: {e}"))
 }
 
 /// Creates a temporary directory with plugin structure and returns the path.
@@ -128,14 +126,13 @@ pub fn create_opstate_with_package(
     let external_package_runner_path = get_debug_binary_path();
 
     // 既存のランタイムハンドルを取得、なければ新しく作成
-    let handle = tokio::runtime::Handle::try_current()
-        .unwrap_or_else(|_| {
-            // 新しいruntimeを作成してハンドルを返す
-            tokio::runtime::Runtime::new()
-                .expect("Failed to create tokio runtime")
-                .handle()
-                .clone()
-        });
+    let handle = tokio::runtime::Handle::try_current().unwrap_or_else(|_| {
+        // 新しいruntimeを作成してハンドルを返す
+        tokio::runtime::Runtime::new()
+            .expect("Failed to create tokio runtime")
+            .handle()
+            .clone()
+    });
 
     let workflow_data = OpStateWorkflowData::new(
         "test_workflow",

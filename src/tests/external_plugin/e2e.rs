@@ -182,10 +182,14 @@ globalThis.Sapphillon = {
     );
 
     let handle = tokio::runtime::Runtime::new().unwrap().handle().clone();
-    
+
     let external_package_runner_path = get_debug_binary_path();
 
-    code_v1.run(handle.clone(), external_package_runner_path.clone(), Some(vec!["ext".to_string()]));
+    code_v1.run(
+        handle.clone(),
+        external_package_runner_path.clone(),
+        Some(vec!["ext".to_string()]),
+    );
 
     assert!(
         code_v1.result[0].result.contains("20"),
@@ -251,7 +255,11 @@ globalThis.Sapphillon = {
         vec![],
     );
 
-    code_v2.run(handle.clone(), external_package_runner_path, Some(vec!["ext".to_string()]));
+    code_v2.run(
+        handle.clone(),
+        external_package_runner_path,
+        Some(vec!["ext".to_string()]),
+    );
 
     assert!(
         code_v2.result[0].result.contains("30"),

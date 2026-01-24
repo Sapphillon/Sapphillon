@@ -122,7 +122,7 @@ fn test_workflow_with_external_plugin_process_data() {
 
     // 既存のランタイムハンドルを取得
     let handle = tokio::runtime::Runtime::new().unwrap().handle().clone();
-    
+
     let external_package_runner_path = get_debug_binary_path();
 
     code.run(
