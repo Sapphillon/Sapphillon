@@ -9,6 +9,8 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::dummy_plugin::dummy_plugin_package;
+use crate::internal_plugins::internal_plugins;
+use entity::convert::plugin::plugin_package_to_proto;
 use exec::{core_exec_plugin_package, exec_plugin_package};
 use fetch::{core_fetch_plugin_package, fetch_plugin_package};
 use filesystem::{core_filesystem_plugin_package, filesystem_plugin_package};
@@ -46,7 +48,13 @@ pub fn sysconfig() -> SysConfig {
             window_plugin_package(),
             exec_plugin_package(),
             dummy_plugin_package(),
-        ],
+        ]
+        .into_iter()
+        .chain(internal_plugins().into_iter().map(|mut plugin| {
+            plugin.plugin_store_url = Some("BUILTIN".to_string());
+            plugin_package_to_proto(&plugin)
+        }))
+        .collect(),
 
         initial_workflows: vec![],
         // Prefer launching external plugins via the current executable when available.
