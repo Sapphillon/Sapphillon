@@ -42,22 +42,22 @@ mod tests {
         // Expected plugin data
         let expected_plugins = vec![
             (
-                "app.sapphillon/example/1.0.0",
+                "test/example/1.0.0",
                 "example",
                 "1.0.0",
             ),
             (
-                "app.sapphillon/plugin-a/1.0.0",
+                "test/plugin-a/1.0.0",
                 "plugin-a",
                 "1.0.0",
             ),
             (
-                "app.sapphillon/plugin-b/1.0.0",
+                "test/plugin-b/1.0.0",
                 "plugin-b",
                 "1.0.0",
             ),
             (
-                "other.author/plugin-c/1.0.0",
+                "test/plugin-c/1.0.0",
                 "plugin-c",
                 "1.0.0",
             ),

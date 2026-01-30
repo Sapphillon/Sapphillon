@@ -19,7 +19,7 @@ pub fn internal_plugins() -> Vec<PluginPackage> {
     let mut plugins = Vec::new();
 
     plugins.push(PluginPackage {
-        package_id: "app.sapphillon/example/1.0.0".to_string(),
+        package_id: "test/example/1.0.0".to_string(),
         package_name: "example".to_string(),
         package_version: "1.0.0".to_string(),
         description: None,
@@ -32,7 +32,7 @@ pub fn internal_plugins() -> Vec<PluginPackage> {
     });
 
     plugins.push(PluginPackage {
-        package_id: "app.sapphillon/plugin-a/1.0.0".to_string(),
+        package_id: "test/plugin-a/1.0.0".to_string(),
         package_name: "plugin-a".to_string(),
         package_version: "1.0.0".to_string(),
         description: None,
@@ -45,7 +45,7 @@ pub fn internal_plugins() -> Vec<PluginPackage> {
     });
 
     plugins.push(PluginPackage {
-        package_id: "app.sapphillon/plugin-b/1.0.0".to_string(),
+        package_id: "test/plugin-b/1.0.0".to_string(),
         package_name: "plugin-b".to_string(),
         package_version: "1.0.0".to_string(),
         description: None,
@@ -58,7 +58,7 @@ pub fn internal_plugins() -> Vec<PluginPackage> {
     });
 
     plugins.push(PluginPackage {
-        package_id: "other.author/plugin-c/1.0.0".to_string(),
+        package_id: "test/plugin-c/1.0.0".to_string(),
         package_name: "plugin-c".to_string(),
         package_version: "1.0.0".to_string(),
         description: None,

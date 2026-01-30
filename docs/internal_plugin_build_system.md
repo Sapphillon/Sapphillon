@@ -30,17 +30,16 @@ js_plugins/
 
 ```
 js_plugins/
-├── app.sapphillon/
-│   ├── example/
-│   │   └── 1.0.0/
-│   │       └── package.js
-│   ├── plugin-a/
-│   │   └── 1.0.0/
-│   │       └── package.js
-│   └── plugin-b/
-│   │   └── 1.0.0/
-│   │       └── package.js
-└── other.author/
+└── test/
+    ├── example/
+    │   └── 1.0.0/
+    │       └── package.js
+    ├── plugin-a/
+    │   └── 1.0.0/
+    │       └── package.js
+    ├── plugin-b/
+    │   └── 1.0.0/
+    │       └── package.js
     └── plugin-c/
         └── 1.0.0/
             └── package.js
@@ -211,10 +210,10 @@ cargo test
 $ cargo build
    Compiling Sapphillon_Controller v0.1.0
 warning: Discovered 4 internal plugin(s):
-warning:   - app.sapphillon/example/1.0.0 (name: example, version: 1.0.0)
-warning:   - app.sapphillon/plugin-a/1.0.0 (name: plugin-a, version: 1.0.0)
-warning:   - app.sapphillon/plugin-b/1.0.0 (name: plugin-b, version: 1.0.0)
-warning:   - other.author/plugin-c/1.0.0 (name: plugin-c, version: 1.0.0)
+warning:   - test/example/1.0.0 (name: example, version: 1.0.0)
+warning:   - test/plugin-a/1.0.0 (name: plugin-a, version: 1.0.0)
+warning:   - test/plugin-b/1.0.0 (name: plugin-b, version: 1.0.0)
+warning:   - test/plugin-c/1.0.0 (name: plugin-c, version: 1.0.0)
     Finished dev [unoptimized + debuginfo] target(s) in 2.45s
 ```
 
@@ -226,7 +225,7 @@ warning:   - other.author/plugin-c/1.0.0 (name: plugin-c, version: 1.0.0)
 
 ```bash
 # ディレクトリ構造の作成
-mkdir -p js_plugins/app.sapphillon/my-plugin/1.0.0
+mkdir -p js_plugins/test/my-plugin/1.0.0
 ```
 
 ### ステップ2: package.jsファイルの作成
@@ -267,7 +266,7 @@ export default {
 
 ```bash
 # 例: index.jsファイルの作成
-touch js_plugins/app.sapphillon/my-plugin/1.0.0/index.js
+touch js_plugins/test/my-plugin/1.0.0/index.js
 ```
 
 ### ステップ4: ビルドの実行
@@ -284,10 +283,10 @@ cargo build
 
 ```bash
 # 1. ディレクトリ作成
-mkdir -p js_plugins/app.sapphillon/hello-world/1.0.0
+mkdir -p js_plugins/test/hello-world/1.0.0
 
 # 2. package.js作成
-cat > js_plugins/app.sapphillon/hello-world/1.0.0/package.js << 'EOF'
+cat > js_plugins/test/hello-world/1.0.0/package.js << 'EOF'
 // Sapphillon
 // SPDX-FileCopyrightText: 2025 Yuta Takahashi
 // SPDX-License-Identifier: MPL-2.0 OR GPL-3.0-or-later
