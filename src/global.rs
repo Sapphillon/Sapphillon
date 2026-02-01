@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MPL-2.0 OR GPL-3.0-or-later
 
 use sea_orm::{Database, DatabaseConnection};
+use std::sync::Arc;
 use std::sync::LazyLock;
 use tokio::sync::RwLock;
 
@@ -11,6 +12,7 @@ pub struct GlobalStateData {
     db_initialized: bool,
     db_url: String,
     ext_plugin_save_dir: Option<String>,
+    db_connection: Option<Arc<DatabaseConnection>>,
 }
 
 #[derive(Debug)]
@@ -35,6 +37,7 @@ impl GlobalState {
                     db_initialized: false,
                     db_url: String::new(),
                     ext_plugin_save_dir: None,
+                    db_connection: None,
                 })
             }),
         }
@@ -48,19 +51,43 @@ impl GlobalState {
     ///
     /// # Returns
     ///
-    /// Returns a [`DatabaseConnection`] when the URL is present and initialization is complete, or an error if the state is invalid.
-    pub async fn get_db_connection(&self) -> anyhow::Result<DatabaseConnection> {
-        let data = self.data.read().await;
+    /// Returns an [`Arc<DatabaseConnection>`] when the URL is present and initialization is complete, or an error if the state is invalid.
+    /// The connection is cached and reused across calls to share the same database connection.
+    pub async fn get_db_connection(&self) -> anyhow::Result<Arc<DatabaseConnection>> {
+        // First, check if we have a cached connection (read lock)
+        {
+            let data = self.data.read().await;
 
-        if !data.db_initialized {
-            anyhow::bail!("Database is not initialized");
+            if !data.db_initialized {
+                anyhow::bail!("Database is not initialized");
+            }
+
+            if data.db_url.is_empty() {
+                anyhow::bail!("Database URL is not set");
+            }
+
+            if let Some(ref conn) = data.db_connection {
+                // Return a clone of the Arc (cheap), which gives us a new reference to the same connection
+                return Ok(Arc::clone(conn));
+            }
         }
 
-        if data.db_url.is_empty() {
-            anyhow::bail!("Database URL is not set");
+        // No cached connection exists, create one (need write lock)
+        let mut data = self.data.write().await;
+
+        // Double-check in case another thread created a connection while we waited
+        if let Some(ref conn) = data.db_connection {
+            return Ok(Arc::clone(conn));
         }
+
+        // Create new connection
         let conn = Database::connect(&data.db_url).await?;
-        Ok(conn)
+
+        // Cache it in the global state (wrapped in Arc for cheap cloning)
+        let conn_arc = Arc::new(conn);
+        data.db_connection = Some(conn_arc.clone());
+
+        Ok(conn_arc)
     }
 
     /// Waits for database initialization to complete and then provides a connection handle.
@@ -71,8 +98,8 @@ impl GlobalState {
     ///
     /// # Returns
     ///
-    /// Returns a [`DatabaseConnection`] once initialization succeeds, or an error if waiting fails.
-    pub async fn wait_init_and_get_connection(&self) -> anyhow::Result<DatabaseConnection> {
+    /// Returns an [`Arc<DatabaseConnection>`] once initialization succeeds, or an error if waiting fails.
+    pub async fn wait_init_and_get_connection(&self) -> anyhow::Result<Arc<DatabaseConnection>> {
         self.wait_db_initialized().await?;
         self.get_db_connection().await
     }

@@ -103,7 +103,7 @@ async fn main() -> Result<()> {
             // Start debug workflow scanner in debug builds only
             #[cfg(debug_assertions)]
             {
-                warn!(
+                tracing::warn!(
                     "Debug workflow feature is enabled. JS files in 'debug_workflow/' directory will be auto-registered with full permissions."
                 );
                 tokio::spawn(async {
@@ -113,7 +113,7 @@ async fn main() -> Result<()> {
 
             // Start plugin reload scanner if --reload flag is set
             if args.reload {
-                warn!(
+                tracing::warn!(
                     "Plugin hot-reload is enabled. Changes to js_plugins will be automatically registered."
                 );
                 tokio::spawn(async {
@@ -125,11 +125,11 @@ async fn main() -> Result<()> {
             tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
 
             // Keep server running
-            info!("Server running on [::1]:50051. Press Ctrl+C to stop.");
+            tracing::info!("Server running on [::1]:50051. Press Ctrl+C to stop.");
             server_handle.await?;
         }
         Command::Ext { server_name } => {
-            info!("Starting External Plugin Server {server_name}...");
+            tracing::info!("Starting External Plugin Server {server_name}...");
             use sapphillon_core::ext_plugin::extplugin_server;
             extplugin_server(&server_name).await?;
         }

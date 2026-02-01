@@ -37,8 +37,8 @@ impl MyProviderService {
     /// # Returns
     ///
     /// Returns a [`MyProviderService`] wrapping the given connection inside an [`Arc`].
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db: Arc::new(db) }
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
+        Self { db }
     }
 
     /// Clears sensitive fields from a provider proto before returning it to clients.

@@ -48,8 +48,8 @@ pub struct MyWorkflowService {
 
 impl MyWorkflowService {
     /// Creates a new workflow service backed by the provided database connection.
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db: Arc::new(db) }
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
+        Self { db }
     }
 
     fn ok_status(message: impl Into<String>) -> Option<RpcStatus> {

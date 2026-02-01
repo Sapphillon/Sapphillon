@@ -178,7 +178,7 @@ async fn reload_plugin(plugin: &PluginInfo) -> Result<()> {
     // Build PluginPackage proto
     let plugin_proto = create_plugin_package_proto(plugin);
 
-    init_register_plugins(&db, vec![plugin_proto]).await?;
+    init_register_plugins(&*db, vec![plugin_proto]).await?;
 
     info!("Successfully registered/updated plugin: {}", plugin.plugin_package_id);
     Ok(())

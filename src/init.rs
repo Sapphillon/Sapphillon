@@ -121,13 +121,13 @@ async fn register_initial_workflows() -> Result<()> {
         // Check if workflow with this display_name already exists
         let exists = entity::entity::workflow::Entity::find()
             .filter(entity::entity::workflow::Column::DisplayName.eq(&wf_def.display_name))
-            .one(&db)
+            .one(&*db)
             .await?;
 
         if exists.is_none() {
             info!("Registering initial workflow: {}", wf_def.display_name);
             let wf = create_workflow(
-                &db,
+                &*db,
                 wf_def.display_name.clone(),
                 wf_def.description.clone(),
                 0, // WORKFLOW_LANGUAGE_UNSPECIFIED
@@ -135,7 +135,7 @@ async fn register_initial_workflows() -> Result<()> {
             .await?;
 
             create_workflow_code(
-                &db,
+                &*db,
                 wf_def.code.clone(),
                 wf.id,
                 vec![], // No initial plugins
@@ -154,7 +154,7 @@ async fn register_initial_plugins() -> Result<()> {
 
     let plugin_packages = crate::sysconfig::sysconfig().initial_plugins;
 
-    init_register_plugins(&database_connection, plugin_packages).await?;
+    init_register_plugins(&*database_connection, plugin_packages).await?;
 
     Ok(())
 }
@@ -176,7 +176,7 @@ async fn sync_ext_plugins() -> Result<()> {
     info!("Syncing external plugins from directory: {save_dir}");
 
     // 1. Get all registered plugins from DB
-    let db_plugins = list_ext_plugin_packages(&db).await?;
+    let db_plugins = list_ext_plugin_packages(&*db).await?;
 
     // 2. Scan filesystem for installed plugins
     let fs_plugins = scan_ext_plugin_dir(&save_dir)?;
@@ -190,14 +190,14 @@ async fn sync_ext_plugins() -> Result<()> {
         if fs_plugins.contains(&db_plugin.plugin_package_id) {
             // Plugin exists on filesystem - ensure not marked as missing
             if db_plugin.missing {
-                mark_ext_plugin_missing(&db, &db_plugin.plugin_package_id, false).await?;
+                mark_ext_plugin_missing(&*db, &db_plugin.plugin_package_id, false).await?;
                 info!("External plugin recovered: {}", db_plugin.plugin_package_id);
             }
             synced_count += 1;
         } else {
             // Plugin missing from filesystem
             if !db_plugin.missing {
-                mark_ext_plugin_missing(&db, &db_plugin.plugin_package_id, true).await?;
+                mark_ext_plugin_missing(&*db, &db_plugin.plugin_package_id, true).await?;
                 warn!(
                     "External plugin missing from filesystem: {}",
                     db_plugin.plugin_package_id
@@ -214,7 +214,7 @@ async fn sync_ext_plugins() -> Result<()> {
             .any(|p| &p.plugin_package_id == fs_plugin_id)
         {
             let install_dir = format!("{save_dir}/{fs_plugin_id}");
-            create_ext_plugin_package(&db, fs_plugin_id.clone(), install_dir).await?;
+            create_ext_plugin_package(&*db, fs_plugin_id.clone(), install_dir).await?;
             info!("Registered new external plugin: {fs_plugin_id}");
             new_count += 1;
         }

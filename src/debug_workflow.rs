@@ -179,7 +179,7 @@ pub async fn register_debug_workflow(workflow: &DebugWorkflowFile) -> Result<()>
     let display_name = format!("[DEBUG] {}", workflow.name);
     let existing = entity::entity::workflow::Entity::find()
         .filter(entity::entity::workflow::Column::DisplayName.eq(&display_name))
-        .one(&db)
+        .one(&*db)
         .await?;
 
     let now = chrono::Utc::now();
@@ -198,7 +198,7 @@ pub async fn register_debug_workflow(workflow: &DebugWorkflowFile) -> Result<()>
         let latest_code = workflow_code_entity::Entity::find()
             .filter(workflow_code_entity::Column::WorkflowId.eq(existing.id.clone()))
             .order_by_desc(workflow_code_entity::Column::CodeRevision)
-            .one(&db)
+            .one(&*db)
             .await?;
 
         (existing.id, created_at_ts, latest_code)

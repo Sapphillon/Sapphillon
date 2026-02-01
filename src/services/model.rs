@@ -37,8 +37,8 @@ impl MyModelService {
     /// # Returns
     ///
     /// Returns a [`MyModelService`] with the connection wrapped in an [`Arc`].
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db: Arc::new(db) }
+    pub fn new(db: Arc<DatabaseConnection>) -> Self {
+        Self { db }
     }
 
     /// Sanitizes a model proto before returning it to clients.
