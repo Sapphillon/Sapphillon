@@ -9,6 +9,7 @@ mod ext_plugin_manager;
 mod init;
 mod internal_plugins;
 mod plugin_installer;
+mod plugin_reload;
 mod server;
 mod services;
 mod workflow;
@@ -110,8 +111,18 @@ async fn main() -> Result<()> {
                 });
             }
 
+            // Start plugin reload scanner if --reload flag is set
+            if args.reload {
+                warn!(
+                    "Plugin hot-reload is enabled. Changes to js_plugins will be automatically registered."
+                );
+                tokio::spawn(async {
+                    plugin_reload::start_plugin_reload_scanner().await;
+                });
+            }
+
             // Wait a moment for server to start
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
 
             // Keep server running
             info!("Server running on [::1]:50051. Press Ctrl+C to stop.");

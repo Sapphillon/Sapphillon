@@ -20,6 +20,10 @@ pub struct Args {
     #[arg(long)]
     pub ext_plugin_save_dir: Option<String>,
 
+    /// Enable automatic reloading of js_plugins when package.js files change
+    #[arg(long)]
+    pub reload: bool,
+
     #[command(subcommand)]
     pub command: Command,
 }
