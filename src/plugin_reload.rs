@@ -44,7 +44,7 @@ struct PluginState {
 
 fn is_valid_version(version: &str) -> bool {
     // Basic check: version should start with a digit
-    version.chars().next().map_or(false, |c| c.is_ascii_digit())
+    version.chars().next().is_some_and(|c| c.is_ascii_digit())
 }
 
 /// Extracts plugin information from a package.js file path
@@ -72,7 +72,7 @@ fn extract_plugin_info(package_path: &Path) -> Option<PluginInfo> {
     }
 
     // Build plugin_package_id in format: {author_id}/{package_id}/{version}
-    let plugin_package_id = format!("{}/{}/{}", author_id, package_id, version);
+    let plugin_package_id = format!("{author_id}/{package_id}/{version}");
 
     // Get the install directory (the directory containing package.js)
     let install_dir = package_path.parent()?.to_path_buf();
@@ -97,10 +97,7 @@ fn extract_plugin_info(package_path: &Path) -> Option<PluginInfo> {
 
 /// Recursively searches for package.js files matching the pattern
 /// {author_id}/{package_id}/{version}/package.js
-fn find_package_files(
-    dir: &Path,
-    plugins: &mut BTreeMap<String, PluginInfo>,
-) -> Result<()> {
+fn find_package_files(dir: &Path, plugins: &mut BTreeMap<String, PluginInfo>) -> Result<()> {
     let entries = fs::read_dir(dir)?;
 
     for entry in entries {
@@ -110,7 +107,7 @@ fn find_package_files(
         if path.is_dir() {
             // Recursively search subdirectories
             find_package_files(&path, plugins)?;
-        } else if path.file_name().map_or(false, |name| name == "package.js") {
+        } else if path.file_name().is_some_and(|name| name == "package.js") {
             // Found a package.js file, extract plugin information
             if let Some(plugin_info) = extract_plugin_info(&path) {
                 plugins.insert(plugin_info.plugin_package_id.clone(), plugin_info);
@@ -126,7 +123,7 @@ pub fn scan_js_plugins() -> Result<Vec<PluginInfo>> {
     let js_plugins_dir = Path::new(JS_PLUGINS_DIR);
 
     if !js_plugins_dir.exists() {
-        debug!("js_plugins directory does not exist: {}", JS_PLUGINS_DIR);
+        debug!("js_plugins directory does not exist: {JS_PLUGINS_DIR}");
         return Ok(vec![]);
     }
 
@@ -150,7 +147,9 @@ fn calculate_hash(content: &str) -> String {
 }
 
 /// Creates a PluginPackage proto from discovered plugin info
-fn create_plugin_package_proto(plugin: &PluginInfo) -> sapphillon_core::proto::sapphillon::v1::PluginPackage {
+fn create_plugin_package_proto(
+    plugin: &PluginInfo,
+) -> sapphillon_core::proto::sapphillon::v1::PluginPackage {
     use sapphillon_core::proto::sapphillon::v1::PluginPackage;
 
     PluginPackage {
@@ -178,9 +177,12 @@ async fn reload_plugin(plugin: &PluginInfo) -> Result<()> {
     // Build PluginPackage proto
     let plugin_proto = create_plugin_package_proto(plugin);
 
-    init_register_plugins(&*db, vec![plugin_proto]).await?;
+    init_register_plugins(&db, vec![plugin_proto]).await?;
 
-    info!("Successfully registered/updated plugin: {}", plugin.plugin_package_id);
+    info!(
+        "Successfully registered/updated plugin: {}",
+        plugin.plugin_package_id
+    );
     Ok(())
 }
 
@@ -190,8 +192,7 @@ async fn reload_plugin(plugin: &PluginInfo) -> Result<()> {
 /// `SCAN_INTERVAL_SECS` seconds and registering any new or changed plugins to the database.
 pub async fn start_plugin_reload_scanner() {
     info!(
-        "Starting js_plugins hot-reload scanner (interval: {}s)",
-        SCAN_INTERVAL_SECS
+        "Starting js_plugins hot-reload scanner (interval: {SCAN_INTERVAL_SECS}s)"
     );
 
     // Wait for database to be fully initialized
@@ -255,7 +256,7 @@ pub async fn start_plugin_reload_scanner() {
                 }
             }
             Err(e) => {
-                warn!("Failed to scan js_plugins directory: {}", e);
+                warn!("Failed to scan js_plugins directory: {e}");
             }
         }
     }

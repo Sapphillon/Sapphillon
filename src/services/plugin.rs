@@ -210,11 +210,12 @@ mod tests {
 				updated_at TEXT
 			)
 		"#;
-        (*db).execute(Statement::from_string(
-            DbBackend::Sqlite,
-            sql_pkg.to_string(),
-        ))
-        .await?;
+        (*db)
+            .execute(Statement::from_string(
+                DbBackend::Sqlite,
+                sql_pkg.to_string(),
+            ))
+            .await?;
 
         // plugin_function table
         let sql_pf = r#"

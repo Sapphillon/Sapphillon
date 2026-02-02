@@ -32,7 +32,9 @@ fn discover_internal_plugins() -> Result<(), Box<dyn std::error::Error>> {
 
     // Check if js_plugins directory exists
     if !js_plugins_dir.exists() {
-        println!("cargo:warning=js_plugins directory not found, skipping internal plugin discovery");
+        println!(
+            "cargo:warning=js_plugins directory not found, skipping internal plugin discovery"
+        );
         return Ok(());
     }
 
@@ -42,7 +44,7 @@ fn discover_internal_plugins() -> Result<(), Box<dyn std::error::Error>> {
     // Recursively search for package.js files matching the pattern
     // Pattern: {author_id}/{package_id}/{version}/package.js
     if let Err(e) = find_package_files(js_plugins_dir, &mut plugins) {
-        println!("cargo:warning=Error searching for package.js files: {}", e);
+        println!("cargo:warning=Error searching for package.js files: {e}");
         return Ok(());
     }
 
@@ -55,8 +57,11 @@ fn discover_internal_plugins() -> Result<(), Box<dyn std::error::Error>> {
     generate_internal_plugins_file(&plugins)?;
 
     // Print summary of discovered plugins
-    println!("cargo:warning=Discovered {} internal plugin(s):", plugins.len());
-    for (_key, plugin) in &plugins {
+    println!(
+        "cargo:warning=Discovered {} internal plugin(s):",
+        plugins.len()
+    );
+    for plugin in plugins.values() {
         println!(
             "cargo:warning=  - {} (name: {}, version: {})",
             plugin.plugin_package_id, plugin.package_name, plugin.package_version
@@ -81,7 +86,7 @@ fn find_package_files(
         if path.is_dir() {
             // Recursively search subdirectories
             find_package_files(&path, plugins)?;
-        } else if path.file_name().map_or(false, |name| name == "package.js") {
+        } else if path.file_name().is_some_and(|name| name == "package.js") {
             // Found a package.js file, extract plugin information
             if let Some(plugin_info) = extract_plugin_info(&path) {
                 plugins.insert(plugin_info.plugin_package_id.clone(), plugin_info);
@@ -106,8 +111,7 @@ fn extract_plugin_info(package_path: &Path) -> Option<PluginInfo> {
     // Expected pattern: {author_id}/{package_id}/{version}/package.js
     if components.len() != 4 || components[3] != "package.js" {
         println!(
-            "cargo:warning=Skipping package.js with unexpected path structure: {:?}",
-            package_path
+            "cargo:warning=Skipping package.js with unexpected path structure: {package_path:?}"
         );
         return None;
     }
@@ -119,14 +123,13 @@ fn extract_plugin_info(package_path: &Path) -> Option<PluginInfo> {
     // Validate version format (basic semantic versioning check)
     if !is_valid_version(version) {
         println!(
-            "cargo:warning=Skipping plugin with invalid version '{}': {:?}",
-            version, package_path
+            "cargo:warning=Skipping plugin with invalid version '{version}': {package_path:?}"
         );
         return None;
     }
 
     // Build plugin_package_id in format: {author_id}/{package_id}/{version}
-    let plugin_package_id = format!("{}/{}/{}", author_id, package_id, version);
+    let plugin_package_id = format!("{author_id}/{package_id}/{version}");
 
     // Get the install directory (the directory containing package.js)
     let install_dir = package_path.parent()?.to_path_buf();
@@ -142,11 +145,13 @@ fn extract_plugin_info(package_path: &Path) -> Option<PluginInfo> {
 /// Validates a version string (basic semantic versioning check)
 fn is_valid_version(version: &str) -> bool {
     // Basic check: version should start with a digit
-    version.chars().next().map_or(false, |c| c.is_ascii_digit())
+    version.chars().next().is_some_and(|c| c.is_ascii_digit())
 }
 
 /// Generates the src/internal_plugins.rs file with discovered plugin information
-fn generate_internal_plugins_file(plugins: &BTreeMap<String, PluginInfo>) -> Result<(), Box<dyn std::error::Error>> {
+fn generate_internal_plugins_file(
+    plugins: &BTreeMap<String, PluginInfo>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let output_path = Path::new("src/internal_plugins.rs");
 
     // Build the generated code
@@ -162,9 +167,9 @@ fn generate_internal_plugins_file(plugins: &BTreeMap<String, PluginInfo>) -> Res
     code.push_str("//\n");
     code.push_str("// This file contains information about internal plugins discovered\n");
     code.push_str("// from the js_plugins directory during build time.\n");
-    code.push_str("\n");
+    code.push('\n');
     code.push_str("use entity::entity::plugin_package::Model as PluginPackage;\n");
-    code.push_str("\n");
+    code.push('\n');
     code.push_str("/// Returns a list of internal plugins discovered at build time.\n");
     code.push_str("///\n");
     code.push_str("/// This function returns plugin information for all internal plugins\n");
@@ -172,17 +177,30 @@ fn generate_internal_plugins_file(plugins: &BTreeMap<String, PluginInfo>) -> Res
     code.push_str("/// alphabetical order by package_id for stable ordering.\n");
     code.push_str("pub fn internal_plugins() -> Vec<PluginPackage> {\n");
     code.push_str("    let mut plugins = Vec::new();\n");
-    code.push_str("\n");
+    code.push('\n');
 
     // Generate plugin entries
     for (plugin_package_id, plugin) in plugins {
         // Escape backslashes in install_dir path for Windows compatibility
-        let _install_dir_escaped = plugin.install_dir.display().to_string().replace("\\", "\\\\");
+        let _install_dir_escaped = plugin
+            .install_dir
+            .display()
+            .to_string()
+            .replace("\\", "\\\\");
 
         code.push_str("    plugins.push(PluginPackage {\n");
-        code.push_str(&format!("        package_id: \"{}\".to_string(),\n", escape_string(plugin_package_id)));
-        code.push_str(&format!("        package_name: \"{}\".to_string(),\n", escape_string(&plugin.package_name)));
-        code.push_str(&format!("        package_version: \"{}\".to_string(),\n", escape_string(&plugin.package_version)));
+        code.push_str(&format!(
+            "        package_id: \"{}\".to_string(),\n",
+            escape_string(plugin_package_id)
+        ));
+        code.push_str(&format!(
+            "        package_name: \"{}\".to_string(),\n",
+            escape_string(&plugin.package_name)
+        ));
+        code.push_str(&format!(
+            "        package_version: \"{}\".to_string(),\n",
+            escape_string(&plugin.package_version)
+        ));
         code.push_str("        description: None,\n");
         code.push_str("        plugin_store_url: None,\n");
         code.push_str("        internal_plugin: true,\n");
@@ -191,7 +209,7 @@ fn generate_internal_plugins_file(plugins: &BTreeMap<String, PluginInfo>) -> Res
         code.push_str("        installed_at: None,\n");
         code.push_str("        updated_at: None,\n");
         code.push_str("    });\n");
-        code.push_str("\n");
+        code.push('\n');
     }
 
     code.push_str("    plugins\n");

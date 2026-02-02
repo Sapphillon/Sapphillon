@@ -21,7 +21,7 @@ mod tests {
     #[test]
     fn test_internal_plugins_count() {
         let plugins = internal_plugins();
-        
+
         // Verify that exactly 4 plugins are returned
         assert_eq!(
             plugins.len(),
@@ -38,62 +38,39 @@ mod tests {
     #[test]
     fn test_internal_plugins_info() {
         let plugins = internal_plugins();
-        
+
         // Expected plugin data
-        let expected_plugins = vec![
-            (
-                "test/example/1.0.0",
-                "example",
-                "1.0.0",
-            ),
-            (
-                "test/plugin-a/1.0.0",
-                "plugin-a",
-                "1.0.0",
-            ),
-            (
-                "test/plugin-b/1.0.0",
-                "plugin-b",
-                "1.0.0",
-            ),
-            (
-                "test/plugin-c/1.0.0",
-                "plugin-c",
-                "1.0.0",
-            ),
-        ];
-        
+        let expected_plugins = [("test/example/1.0.0", "example", "1.0.0"),
+            ("test/plugin-a/1.0.0", "plugin-a", "1.0.0"),
+            ("test/plugin-b/1.0.0", "plugin-b", "1.0.0"),
+            ("test/plugin-c/1.0.0", "plugin-c", "1.0.0")];
+
         // Verify each plugin's information
         for plugin in &plugins {
             // Find the expected plugin data
             let expected = expected_plugins
                 .iter()
                 .find(|(id, _, _)| id == &plugin.package_id)
-                .expect(&format!(
-                    "Unexpected plugin_id found: {}",
-                    plugin.package_id
-                ));
-            
+                .unwrap_or_else(|| panic!("Unexpected plugin_id found: {}",
+                    plugin.package_id));
+
             // Verify package_id
             assert_eq!(
-                plugin.package_id,
-                expected.0,
+                plugin.package_id, expected.0,
                 "package_id should match for plugin {}",
                 plugin.package_id
             );
-            
+
             // Verify package_name
             assert_eq!(
-                plugin.package_name,
-                expected.1,
+                plugin.package_name, expected.1,
                 "package_name should match for plugin {}",
                 plugin.package_id
             );
-            
+
             // Verify package_version
             assert_eq!(
-                plugin.package_version,
-                expected.2,
+                plugin.package_version, expected.2,
                 "package_version should match for plugin {}",
                 plugin.package_id
             );
@@ -108,7 +85,7 @@ mod tests {
     #[test]
     fn test_internal_plugins_flag() {
         let plugins = internal_plugins();
-        
+
         // Verify that all plugins have internal_plugin set to true
         for plugin in &plugins {
             assert!(
@@ -127,7 +104,7 @@ mod tests {
     #[test]
     fn test_internal_plugins_store_url() {
         let plugins = internal_plugins();
-        
+
         // Verify that all plugins have plugin_store_url set to None
         for plugin in &plugins {
             assert!(
@@ -146,14 +123,14 @@ mod tests {
     #[test]
     fn test_internal_plugins_order() {
         let plugins = internal_plugins();
-        
+
         // Collect package_ids
         let package_ids: Vec<&str> = plugins.iter().map(|p| p.package_id.as_str()).collect();
-        
+
         // Create a sorted version
         let mut sorted_ids = package_ids.clone();
         sorted_ids.sort();
-        
+
         // Verify that the package_ids are sorted
         assert_eq!(
             package_ids, sorted_ids,
@@ -169,7 +146,7 @@ mod tests {
     #[test]
     fn test_internal_plugins_verified_flag() {
         let plugins = internal_plugins();
-        
+
         // Verify that all plugins have verified set to true
         for plugin in &plugins {
             assert!(
@@ -188,7 +165,7 @@ mod tests {
     #[test]
     fn test_internal_plugins_deprecated_flag() {
         let plugins = internal_plugins();
-        
+
         // Verify that all plugins have deprecated set to false
         for plugin in &plugins {
             assert!(
@@ -207,7 +184,7 @@ mod tests {
     #[test]
     fn test_internal_plugins_description() {
         let plugins = internal_plugins();
-        
+
         // Verify that all plugins have description set to None
         for plugin in &plugins {
             assert!(
@@ -226,7 +203,7 @@ mod tests {
     #[test]
     fn test_internal_plugins_installed_at() {
         let plugins = internal_plugins();
-        
+
         // Verify that all plugins have installed_at set to None
         for plugin in &plugins {
             assert!(
@@ -245,7 +222,7 @@ mod tests {
     #[test]
     fn test_internal_plugins_updated_at() {
         let plugins = internal_plugins();
-        
+
         // Verify that all plugins have updated_at set to None
         for plugin in &plugins {
             assert!(
@@ -264,21 +241,24 @@ mod tests {
     #[test]
     fn test_internal_plugins_package_id_format() {
         let plugins = internal_plugins();
-        
+
         // Verify that all package_ids follow the expected format
         for plugin in &plugins {
             let parts: Vec<&str> = plugin.package_id.split('/').collect();
-            
+
             assert_eq!(
                 parts.len(),
                 3,
                 "package_id should have exactly 3 parts separated by '/' for plugin {}",
                 plugin.package_id
             );
-            
+
             // Verify that version starts with a digit (basic semantic versioning check)
             assert!(
-                parts[2].chars().next().map_or(false, |c| c.is_ascii_digit()),
+                parts[2]
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_ascii_digit()),
                 "version should start with a digit for plugin {}",
                 plugin.package_id
             );
@@ -294,14 +274,14 @@ mod tests {
     fn test_internal_plugins_consistency() {
         let plugins1 = internal_plugins();
         let plugins2 = internal_plugins();
-        
+
         // Verify that both calls return the same number of plugins
         assert_eq!(
             plugins1.len(),
             plugins2.len(),
             "internal_plugins() should return the same number of plugins on multiple calls"
         );
-        
+
         // Verify that both calls return the same plugins
         for (p1, p2) in plugins1.iter().zip(plugins2.iter()) {
             assert_eq!(

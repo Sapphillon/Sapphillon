@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo build:*)",
+      "Bash(cargo test:*)",
+      "Bash(timeout 10 cargo run:*)",
+      "Bash(timeout 15 cargo run:*)",
+      "Bash(timeout:*)",
+      "Bash(RUST_LOG=info grep:*)"
+    ]
+  }
+}
