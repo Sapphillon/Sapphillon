@@ -7449,7 +7449,7 @@ version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac6c3320f9abac597dcbc668774ef006702672474aad53c6d596b62e487b40b1"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "itertools 0.14.0",
  "log",
  "multimap",
@@ -10391,9 +10391,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-web"
-version = "0.14.2"
+version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75214f6b6bd28c19aa752ac09fdf0eea546095670906c21fe3940e180a4c43f2"
+checksum = "b1d56db85992f978d0c35a091674c03d42c48e029357833d311e95c6f7ec8f5a"
 dependencies = [
  "base64 0.22.1",
  "bytes",
