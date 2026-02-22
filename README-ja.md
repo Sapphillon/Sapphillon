@@ -147,7 +147,7 @@ MPL-2.0 OR GPL-3.0-or-later
 
 - [Sapphillon](https://github.com/Sapphillon/Sapphillon)
 - [Sapphillon Front](https://github.com/Sapphillon/Sapphillon-front)
-- [Sapphillon Core (コアライブラリ)](https://github.com/Sapphillon/Sapphillon-core)
+- [Sapphillon Core (コアライブラリ)](https://github.com/Sapphillon/Sapphillon-Core)
 - [Sapphillon CLI (コマンドラインツール)](https://github.com/Sapphillon/Sapphillon_cli)
 - [リポジトリテンプレート](https://github.com/Walkmana-25/rust-actions-template)
 
