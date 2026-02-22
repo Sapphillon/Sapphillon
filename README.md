@@ -2,31 +2,38 @@
 
 ## Overview
 
-Sapphillon is an extensible workflow orchestration system developed in Rust. It enables flexible workflow automation through gRPC-based architecture and a plugin system.
+Sapphillon is an extensible workflow orchestration system developed in Rust, featuring AI-powered workflow generation. It achieves flexible workflow automation through a gRPC-based architecture, Deno-based custom runtime, and plugin system.
+
 
 ## Key Features
 
 ### Core Features
-- Workflow orchestration (JavaScript/TypeScript support)
-- gRPC server (port 50051)
-- SQLite database management (SeaORM)
-- Extensible plugin system
+- Workflow Orchestration (JavaScript/TypeScript support)
+- gRPC Server (port 50051)
+- SQLite Database Management (SeaORM)
+- Extensible Plugin System
+- AI-Powered Workflow Generation
 
 ### Built-in Plugins
-- **fetch**: HTTP requests
-- **filesystem**: File system operations
-- **window**: Window management
-- **exec**: Command execution
-- **search**: File search
-
-## Protocol Buffer Debug Tools
-
-- evans
-- buf
-
-This repository generated from <https://github.com/Walkmana-25/rust-actions-example>
+- **fetch**: HTTP Requests
+- **filesystem**: File System Operations
+- **window**: Window Management
+- **exec**: Command Execution
+- **search**: File Search
 
 ## Installation
+
+### System Requirements
+
+- macOS
+    - Big Sur or Later
+    - Apple Silicon
+- Linux
+    - glibc 2.31 or Later
+    - AMD64 or ARM64
+- Windows (Paused)
+    - Windows 10 or Later
+    - x64
 
 ### Dependencies
 - Rust 2024 Edition
@@ -52,11 +59,11 @@ cargo run -- --loglevel debug --db-url ./debug/sqlite.db start
 ```
 
 ### Command Line Options
-| Option | Description | Default |
+| Option | Description | Default Value |
 |-----------|------|------------|
 | `--loglevel` | Log level | info |
 | `--db-url` | Database URL | In-memory SQLite |
-| `--ext-plugin-save-dir` | External plugin save directory | System temp directory |
+| `--ext-plugin-save-dir` | External plugin save directory | System temporary directory |
 
 ## Project Structure
 
@@ -78,14 +85,16 @@ Sapphillon/
 For detailed development information, see [`DEVELOPERS.md`](DEVELOPERS.md).
 
 ### Makefile Targets
-- `make rust_test`: Run tests
-- `make rust_build`: Build
-- `make rust_check_format`: Check code formatting
-- `make rust_fix_format`: Fix code formatting
+
+- `make test`: Run tests
+- `make build`: Build
+- `make fmt`: Code check
+- `make fix_fmt`: Code fix
 - `make migrate`: Run migrations
-- `make run`: Run locally
+- `make run`: Local execution
 
 ### Development Workflow
+
 ```bash
 # Initialize database
 make gen_empty_db && make migrate && make entity_generate
@@ -96,21 +105,21 @@ make run
 
 ## Debug Workflow (Debug Build Only)
 
-This feature is only enabled in debug builds. It periodically scans the `debug_workflow` directory for JavaScript files and automatically registers them to the database.
+This feature is only available in debug builds. It periodically scans the `debug_workflow` directory and automatically registers JavaScript files to the database.
 
 ### Features
 
-- **Periodic Scan**: Scans the `debug_workflow` directory every 10 seconds
-- **Full Permissions**: Debug workflows are granted access to all plugins
-- **Auto-Registration**: Detected JS files are automatically registered as workflows in the database
+- **Periodic Scanning**: Scans the `debug_workflow` directory every 5 seconds
+- **Full Permissions**: Debug workflows have access to all plugins
+- **Auto Registration**: Detected JS files are automatically registered as workflows in the database
 
 ### Usage
 
 1. Place JavaScript files in the `debug_workflow` directory
-2. Run the application with a debug build (`cargo run`)
-3. Workflows will be registered with the `[DEBUG]` prefix in the database
+2. Run the application with debug build (`cargo run`)
+3. Workflows are registered in the database with a `[DEBUG]` prefix
 
-### Sample
+### Example
 
 ```javascript
 // debug_workflow/test.js
@@ -122,20 +131,35 @@ function workflow() {
 workflow();
 ```
 
-> **Note**: This feature is only available in debug builds. It is disabled in release builds (`cargo build --release`).
+> **Note**: This feature is only available in debug builds. It will be disabled in release builds (`cargo build --release`).
 
 ## License
 
 MPL-2.0 OR GPL-3.0-or-later
 
-See [`LICENSE`](LICENSE), [`LICENSE-MPL`](LICENSE-MPL), and [`LICENSE-GPL`](LICENSE-GPL) for details.
+For details, see [`LICENSE`](LICENSE), [`LICENSE-MPL`](LICENSE-MPL), [`LICENSE-GPL`](LICENSE-GPL).
 
 ## Copyright
 
 © 2025 Yuta Takahashi
+
+## Related Repositories
+
+- [Sapphillon](https://github.com/Sapphillon/Sapphillon)
+- [Sapphillon Front](https://github.com/Sapphillon/Sapphillon-front)
+- [Sapphillon Core (Core Library)](https://github.com/Sapphillon/Sapphillon-core)
+- [Sapphillon CLI (Command Line Tool)](https://github.com/Sapphillon/Sapphillon_cli)
+- [Repository Template](https://github.com/Walkmana-25/rust-actions-template)
+
 
 ## Links
 
 - [GitHub Repository](https://github.com/Walkmana-25/Sapphillon)
 - [Developer Documentation](DEVELOPERS.md)
 - [Test Documentation](src/tests/README.md)
+
+## Special Thanks
+
+- [Floorp Projects](https://floorp.app)
+- [Repository Template](https://github.com/Walkmana-25/rust-actions-template)
+- [IPA Mitou IT Human Resources Development Project](https://www.ipa.go.jp/jinzai/mitou/)
