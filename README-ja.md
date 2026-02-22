@@ -9,9 +9,8 @@ Sapphillonは、Rustで開発された拡張可能なLLMワークフローオー
 
 ### コア機能
 - ワークフローオーケストレーション（JavaScript/TypeScript対応）
-- gRPCサーバー（ポート50051）
-- SQLiteデータベース管理（SeaORM）
 - 拡張可能なプラグインシステム
+- LLMによるワークフロー自動生成
 
 ### ビルトインプラグイン
 - **fetch**: HTTPリクエスト
