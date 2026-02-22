@@ -2,15 +2,17 @@
 
 ## 概要
 
-Sapphillonは、Rustで開発された拡張可能なLLMワークフローオーケストレーションシステムです。gRPCベースのアーキテクチャ、Denoベースのカスタムランタイムとプラグインシステムにより、柔軟なワークフロー自動化を実現します。
+Sapphillonは、Rustで開発された拡張可能なワークフローオーケストレーションシステムで、AIによるワークフロー自動生成機能を備えています。gRPCベースのアーキテクチャ、Denoベースのカスタムランタイムとプラグインシステムにより、柔軟なワークフロー自動化を実現します。
 
 
 ## 主な機能
 
 ### コア機能
 - ワークフローオーケストレーション（JavaScript/TypeScript対応）
+- gRPCサーバー（ポート50051）
+- SQLiteデータベース管理（SeaORM）
 - 拡張可能なプラグインシステム
-- LLMによるワークフロー自動生成
+- AIによるワークフロー自動生成
 
 ### ビルトインプラグイン
 - **fetch**: HTTPリクエスト
@@ -84,10 +86,10 @@ Sapphillon/
 
 ### Makefileターゲット
 
-- `make rust_test`: テスト実行
-- `make rust_build`: ビルド
-- `make rust_check_format`: コードチェック
-- `make rust_fix_format`: コード修正
+- `make test`: テスト実行
+- `make build`: ビルド
+- `make fmt`: コードチェック
+- `make fix_fmt`: コード修正
 - `make migrate`: マイグレーション実行
 - `make run`: ローカル実行
 
@@ -107,7 +109,7 @@ make run
 
 ### 機能
 
-- **定期スキャン**: `debug_workflow` ディレクトリを10秒ごとにスキャン
+- **定期スキャン**: `debug_workflow` ディレクトリを5秒ごとにスキャン
 - **フル権限**: デバッグワークフローはすべてのプラグインにアクセス可能
 - **自動登録**: 検出されたJSファイルは自動的にワークフローとしてデータベースに登録
 
@@ -152,7 +154,7 @@ MPL-2.0 OR GPL-3.0-or-later
 
 ## リンク
 
-- [GitHubリポジトリ](https://github.com/Sapphillon/Sapphillon)
+- [GitHubリポジトリ](https://github.com/Walkmana-25/Sapphillon)
 - [開発者ドキュメント](DEVELOPERS.md)
 - [テストドキュメント](src/tests/README.md)
 
